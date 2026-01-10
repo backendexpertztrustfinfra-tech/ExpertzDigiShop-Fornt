@@ -26,8 +26,7 @@ const statusIcons = {
   shipped: <Truck className="h-4 w-4" />,
   delivered: <CheckCircle className="h-4 w-4" />,
 }
-// jbshdfihsoij
-// hlo one 2 3
+
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   confirmed: "bg-blue-100 text-blue-800 border-blue-200",
