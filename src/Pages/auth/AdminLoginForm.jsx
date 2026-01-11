@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "react-toastify"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api"
 
 function AdminLoginForm() {
   const [showPassword, setShowPassword] = useState(false)

@@ -51,6 +51,12 @@ import SellerReviewsPage from "./Pages/seller/SellerReviewsPage";
 import NotificationsPage from "./components/notifications/NotificationsPage";
 import CategoryProducts from "./components/home/CategoryProducts";
 import CartPage from "./components/cart/cart";
+import SellerLayout from "./Pages/seller/SellerLayout";
+import LoginPage from "./Pages/auth/LoginPage";
+import RegisterPage from "./Pages/auth/RegisterPage";
+import ForgotPasswordPage from "./Pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./Pages/auth/ResetPasswordPage";
+import FirebasePasswordResetSuccess from "./Pages/auth/FirebasePasswordResetSuccess";
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsersPage from "./Pages/admin/AdminUsersPage";
 import AdminSellersPage from "./Pages/admin/AdminSellersPage";
@@ -58,12 +64,6 @@ import AdminOrdersPage from "./Pages/admin/AdminOrdersPage";
 import AdminComplaintsPage from "./Pages/admin/AdminComplaintsPage";
 import AdminDeliveryPage from "./Pages/admin/AdminDeliveryPage";
 import AdminLoginForm from "./Pages/auth/AdminLoginForm";
-import SellerLayout from "./Pages/seller/SellerLayout";
-import LoginPage from "./Pages/auth/LoginPage";
-import RegisterPage from "./Pages/auth/RegisterPage";
-import ForgotPasswordPage from "./Pages/auth/ForgotPasswordPage";
-import ResetPasswordPage from "./Pages/auth/ResetPasswordPage";
-import FirebasePasswordResetSuccess from "./Pages/auth/FirebasePasswordResetSuccess"
 
 const HomePage = () => (
   <>
@@ -80,8 +80,9 @@ function App() {
   const { isLoading } = useAuth();
   const location = useLocation();
 
-  // Hide global Header/Footer for Dashboard areas
-  const isDashboardArea = location.pathname.startsWith("/seller") || location.pathname.startsWith("/admin");
+  const isDashboardArea =
+    location.pathname.startsWith("/seller") ||
+    location.pathname.startsWith("/admin");
 
   if (isLoading) {
     return (
@@ -104,7 +105,7 @@ function App() {
           <Route path="/products/:category" element={<ProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
           <Route path="/cart" element={<CartPage />} />
-          
+
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/careers" element={<CareersPage />} />
@@ -120,11 +121,22 @@ function App() {
 
           {/* --- AUTH ROUTES --- */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<Navigate to="/register/role" replace />} />
+          <Route
+            path="/register"
+            element={<Navigate to="/register/role" replace />}
+          />
           <Route path="/register/role" element={<RegisterPage />} />
-          <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            path="/auth/forgot-password"
+            element={<ForgotPasswordPage />}
+          />
           <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/auth/password-reset-success" element={<FirebasePasswordResetSuccess />} />
+          <Route
+            path="/auth/password-reset-success"
+            element={<FirebasePasswordResetSuccess />}
+          />
+
+          <Route path="/admin/login" element={<AdminLoginForm />} />
 
           {/* --- USER PROTECTED ROUTES --- */}
           <Route
@@ -198,12 +210,21 @@ function App() {
             <Route path="orders/list" element={<SellerOrdersListPage />} />
             <Route path="analytics/revenue" element={<SellerRevenuePage />} />
             <Route path="analytics/rating" element={<SellerRatingPage />} />
-            <Route path="analytics/customers" element={<SellerCustomerPage />} />
+            <Route
+              path="analytics/customers"
+              element={<SellerCustomerPage />}
+            />
             <Route path="add-product" element={<AddProductPage />} />
-            <Route path="product-details/:id" element={<SellerProductDetailsPage />} />
+            <Route
+              path="product-details/:id"
+              element={<SellerProductDetailsPage />}
+            />
             <Route path="edit-product/:id" element={<EditProductPage />} />
             <Route path="analytics/reviews" element={<SellerReviewsPage />} />
-            <Route path="support/tickets" element={<SellerSupportTicketsPage />} />
+            <Route
+              path="support/tickets"
+              element={<SellerSupportTicketsPage />}
+            />
             <Route path="returns/requests" element={<SellerReturnsPage />} />
             <Route path="profile" element={<SellerProfilePage />} />
             <Route path="setup" element={<SellerSetupPage />} />
