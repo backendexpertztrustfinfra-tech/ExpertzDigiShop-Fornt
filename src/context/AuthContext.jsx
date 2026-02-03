@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react"
 import Cookies from "js-cookie"
-import { jwtDecode } from "jwt-decode";
-
+import { jwtDecode } from "jwt-decode"
 
 export const AuthContext = createContext()
 
@@ -15,10 +14,13 @@ export const AuthProvider = ({ children }) => {
   // Initialize auth state from cookies
   useEffect(() => {
     const initializeAuth = () => {
-      const token = Cookies.get("userToken")
+      const userTokenCookie = Cookies.get("userToken")
+      const adminTokenCookie = Cookies.get("adminToken")
       const role = Cookies.get("userRole")
       const userData = Cookies.get("userData")
       const verificationStatus = Cookies.get("sellerVerificationStatus")
+
+      const token = adminTokenCookie || userTokenCookie
 
       if (token && role) {
         try {
@@ -43,6 +45,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           console.error("[v0] Invalid token:", error)
           Cookies.remove("userToken")
+          Cookies.remove("adminToken")
           Cookies.remove("userRole")
           Cookies.remove("userData")
           Cookies.remove("sellerVerificationStatus")
@@ -59,7 +62,12 @@ export const AuthProvider = ({ children }) => {
 
     const normalizedRole = String(role).toLowerCase()
 
-    Cookies.set("userToken", token, { expires: 7, secure: true, sameSite: "Lax" })
+    if (normalizedRole === "admin" || normalizedRole === "super_admin") {
+      Cookies.set("adminToken", token, { expires: 7, secure: true, sameSite: "None" })
+    } else {
+      Cookies.set("userToken", token, { expires: 7, secure: true, sameSite: "None" })
+    }
+
     Cookies.set("userRole", normalizedRole, { expires: 7 })
     Cookies.set("userData", JSON.stringify(userData), { expires: 7 })
     if (verificationStatus) {
@@ -87,6 +95,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     Cookies.remove("userToken")
+    Cookies.remove("adminToken")
     Cookies.remove("userRole")
     Cookies.remove("userData")
     Cookies.remove("sellerVerificationStatus")

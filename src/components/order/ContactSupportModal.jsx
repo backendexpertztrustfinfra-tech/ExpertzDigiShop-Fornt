@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import {
   Dialog,
@@ -19,12 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { MessageCircle, Loader2, Send } from "lucide-react"
+import { MessageCircle, Loader2, Send, ShieldCheck, Box, Headphones } from "lucide-react"
 import { toast } from "react-toastify"
+import axios from "axios"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api"
 
-export default function ContactSupportModal({ isOpen, onClose, orderId, userToken }) {
+export default function ContactSupportModal({ isOpen, onClose, orderId, sellerId, userToken, orderNumber }) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     subject: "",
@@ -33,12 +32,12 @@ export default function ContactSupportModal({ isOpen, onClose, orderId, userToke
   })
 
   const categories = [
-    { value: "delivery", label: "Delivery Issue" },
-    { value: "product_quality", label: "Product Quality" },
-    { value: "product_damage", label: "Product Damage" },
-    { value: "payment_issue", label: "Payment Issue" },
+    { value: "delivery", label: "Delivery Related Issue" },
+    { value: "product_quality", label: "Product Quality/Defect" },
+    { value: "product_damage", label: "Damaged Product Received" },
+    { value: "payment_issue", label: "Payment/Refund Related" },
     { value: "general", label: "General Inquiry" },
-    { value: "other", label: "Other" },
+    { value: "other", label: "Other Issues" },
   ]
 
   const handleSubmit = async (e) => {
@@ -50,26 +49,23 @@ export default function ContactSupportModal({ isOpen, onClose, orderId, userToke
 
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/support`, {
-        method: "POST",
+      const response = await axios.post(`${API_BASE_URL}/support`, {
+        ...formData,
+        orderId,
+        sellerId, 
+      }, {
         headers: {
-          Authorization: `Bearer ${userToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          orderId,
-        }),
+          Authorization: `Bearer ${userToken}`
+        }
       })
 
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || "Failed to create ticket")
-
-      toast.success(`Ticket created! #${data.ticket.ticketNumber}`)
-      setFormData({ subject: "", category: "general", description: "" })
-      onClose()
+      if (response.data.success) {
+        toast.success(`Ticket Created! Reference ID: #${response.data.data.ticketNumber}`)
+        setFormData({ subject: "", category: "general", description: "" })
+        onClose()
+      }
     } catch (error) {
-      toast.error(error.message)
+      toast.error(error.response?.data?.message || "Something went wrong. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -77,106 +73,122 @@ export default function ContactSupportModal({ isOpen, onClose, orderId, userToke
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* Note: 'overflow-visible' added to DialogContent to prevent dropdown clipping 
-      */}
-      <DialogContent className="max-w-[95vw] sm:max-w-md rounded-3xl border-zinc-200 bg-white p-0 overflow-visible shadow-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg rounded-[2.5rem] border-none bg-white p-0 overflow-hidden shadow-2xl">
         
-        {/* Header Section */}
-        <div className="bg-zinc-950 p-6 text-white rounded-t-3xl">
+        {/* Professional Header Section */}
+        <div className="bg-zinc-950 p-8 text-white relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/10 blur-[60px] rounded-full" />
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase italic tracking-tighter">
-              <MessageCircle className="h-6 w-6 text-indigo-500" />
-              Contact Support
-            </DialogTitle>
-            <DialogDescription className="text-zinc-400 font-medium uppercase text-[10px] tracking-widest">
-              Resolution Node • ID: {orderId?.slice(-6) || "GENERAL"}
-            </DialogDescription>
+            <div className="flex items-center gap-3 mb-4">
+               <div className="h-10 w-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <Headphones className="h-5 w-5 text-white" />
+               </div>
+               <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">
+                 Help <span className="text-indigo-500">Center</span>
+               </DialogTitle>
+            </div>
+            
+            {/* Order Quick Info Card */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+               <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Box className="h-5 w-5 text-zinc-400" />
+               </div>
+               <div className="text-left">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Issue regarding order</p>
+                  <p className="text-sm font-bold text-zinc-200">ID: {orderNumber || orderId?.slice(-10).toUpperCase() || "NEW_REQUEST"}</p>
+               </div>
+            </div>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Issue Category Dropdown */}
-          <div className="space-y-2 relative">
-            <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">
-              Issue Category *
-            </Label>
-            <Select 
-              value={formData.category} 
-              onValueChange={(val) => setFormData({ ...formData, category: val })}
-            >
-              <SelectTrigger className="h-12 rounded-xl border-zinc-200 bg-zinc-50 focus:ring-indigo-600 font-bold text-zinc-900 shadow-sm">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              
-              {/* Fix: added 'z-[100]' and 'position relative' to ensure it stays on top 
-              */}
-              <SelectContent className="z-[100] rounded-xl border-zinc-200 shadow-2xl bg-white min-w-[var(--radix-select-trigger-width)]">
-                {categories.map((cat) => (
-                  <SelectItem 
-                    key={cat.value} 
-                    value={cat.value} 
-                    className="font-bold py-3 uppercase text-[11px] tracking-wide focus:bg-indigo-50 focus:text-indigo-700 cursor-pointer"
-                  >
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-zinc-50/50">
+          <div className="grid grid-cols-1 gap-6">
+            
+            {/* Category Selection */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                Select Issue Category
+              </Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={(val) => setFormData({ ...formData, category: val })}
+              >
+                <SelectTrigger className="h-14 rounded-2xl border-zinc-200 bg-white focus:ring-zinc-950 font-bold text-zinc-900 shadow-sm">
+                  <SelectValue placeholder="What is the issue about?" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl bg-white border-zinc-200 shadow-2xl">
+                  {categories.map((cat) => (
+                    <SelectItem 
+                      key={cat.value} 
+                      value={cat.value} 
+                      className="font-bold py-3 text-sm focus:bg-zinc-100"
+                    >
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subject Input */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                Problem Summary
+              </Label>
+              <Input
+                placeholder="e.g., Wrong item delivered"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                className="h-14 rounded-2xl border-zinc-200 bg-white focus-visible:ring-zinc-950 font-bold shadow-sm"
+              />
+            </div>
+
+            {/* Description Textarea */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                Describe your issue in detail
+              </Label>
+              <Textarea
+                placeholder="Please provide more details so our team can help you faster..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+                className="rounded-[2rem] border-zinc-200 bg-white focus-visible:ring-zinc-950 font-bold resize-none shadow-sm p-5"
+              />
+            </div>
+
           </div>
 
-          {/* Subject Line */}
-          <div className="space-y-2">
-            <Label htmlFor="subject" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">
-              Subject *
-            </Label>
-            <Input
-              id="subject"
-              placeholder="Summary of your issue"
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className="h-12 rounded-xl border-zinc-200 bg-zinc-50 focus-visible:ring-indigo-600 font-bold placeholder:text-zinc-400"
-            />
-          </div>
-
-          {/* Detailed Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">
-              Detailed Description *
-            </Label>
-            <Textarea
-              id="description"
-              placeholder="Describe the problem in detail..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="rounded-2xl border-zinc-200 bg-zinc-50 focus-visible:ring-indigo-600 font-bold placeholder:text-zinc-400 resize-none p-4"
-            />
-          </div>
-
-          {/* Buttons Section */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-100">
+          {/* Action Buttons */}
+          <div className="flex gap-4 pt-4">
             <Button 
               type="button" 
               variant="outline" 
               onClick={onClose} 
-              className="flex-1 h-12 rounded-2xl border-zinc-200 font-black uppercase text-[10px] tracking-widest hover:bg-zinc-50"
+              className="flex-1 h-16 rounded-2xl border-zinc-200 font-black uppercase text-[10px] tracking-widest hover:bg-zinc-100 transition-all"
             >
-              Discard
+              Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={loading} 
-              className="flex-1 h-12 rounded-2xl bg-zinc-950 hover:bg-indigo-600 text-white font-black uppercase text-[10px] tracking-widest transition-all shadow-xl active:scale-95"
+              className="flex-[2] h-16 rounded-2xl bg-[#FF4E50] hover:bg-[#E75480] text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-xl shadow-red-500/10 active:scale-95"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Ticket
+                  Create Ticket <Send className="h-4 w-4 ml-2" />
                 </>
               )}
             </Button>
+          </div>
+          
+          <div className="flex items-center justify-center gap-2 text-zinc-400">
+             <ShieldCheck size={12} className="text-green-500" />
+             <p className="text-[9px] font-bold uppercase tracking-widest">
+               Secured by DigiShop Protection Protocol
+             </p>
           </div>
         </form>
       </DialogContent>

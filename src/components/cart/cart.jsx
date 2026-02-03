@@ -7,17 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/hooks/useCart";
 import { formatPrice } from "@/lib/utils";
 
-const IMAGE_ROOT_URL = "http://localhost:5000";
+const IMAGE_ROOT_URL = import.meta.env.VITE_API_URL 
+  ? import.meta.env.VITE_API_URL.replace("/api", "") 
+  : "http://localhost:5000";
 
 const getFullImageUrl = (imagePath) => {
-  if (imagePath && typeof imagePath === "string") {
-    const cleaned = imagePath.replace(/\\/g, "/");
-    const finalPath = cleaned.startsWith("uploads/")
-      ? cleaned
-      : `uploads/${cleaned}`;
-    return `${IMAGE_ROOT_URL}/${finalPath.replace(/^\/+/, "")}`;
+  if (!imagePath) return "/placeholder.svg";
+  if (imagePath.startsWith("http")) return imagePath;
+  let cleaned = imagePath.replace(/\\/g, "/");
+  if (!cleaned.startsWith("uploads/")) {
+    cleaned = `uploads/${cleaned.replace(/^\/+/, "")}`;
   }
-  return "/placeholder.svg";
+  return `${IMAGE_ROOT_URL.replace(/\/+$/, "")}/${cleaned}`;
 };
 
 const CartPage = () => {

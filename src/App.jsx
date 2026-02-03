@@ -1,4 +1,3 @@
-"use client";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
@@ -8,6 +7,8 @@ import LatestProducts from "./components/home/LatestProducts";
 import DiscountedProducts from "./components/home/DiscountedProducts";
 import CategoryShowcase from "./components/home/CategoryShowcase";
 import FeaturedProducts from "./components/home/FeaturedProducts";
+
+// Seller Pages
 import SellerDashboardPage from "./Pages/seller/SellerDashboardPage";
 import SellerProductInventoryPage from "./Pages/seller/SellerProductInventoryPage";
 import SellerOrdersListPage from "./Pages/seller/SellerOrdersListPage";
@@ -17,9 +18,16 @@ import SellerCustomerPage from "./Pages/seller/SellerCustomerPage";
 import SellerSetupPage from "./Pages/seller/SellerSetupPage";
 import SellerVerificationPage from "./Pages/seller/SellerVerificationPage";
 import SellerProfilePage from "./Pages/seller/SellerProfilePage";
-import AddProductPage from "./Pages/seller/AddProductForm";
+import AddProductPage from "./Pages/seller/AddProductPage";
 import EditProductPage from "./Pages/seller/EditProductPage";
 import SellerProductDetailsPage from "./Pages/seller/SellerProductDetailsPage";
+import SellerSupport from "./Pages/seller/SellerSupport";
+import SellerReturnsPage from "./Pages/seller/SellerReturnsPage";
+import SellerReviewsPage from "./Pages/seller/SellerReviewsPage";
+import SellerLayout from "./Pages/seller/SellerLayout";
+import SellerCustomerIssues from "./Pages/seller/SellerCustomerIssues";
+
+// User Pages
 import ProfilePage from "./Pages/profile/ProfilePage";
 import OrderDetailPage from "./Pages/profile/OrderDetailPage";
 import OrdersPage from "./Pages/profile/OrdersPage";
@@ -28,6 +36,22 @@ import ProductsPage from "./components/products/ProductsPage";
 import ProductDetailsPage from "./components/products/ProductDetailsPage";
 import CheckoutPage from "./Pages/CheckoutPage";
 import OrderSuccessPage from "./Pages/OrderSuccessPage";
+import CartPage from "./components/cart/cart";
+import NotificationsPage from "./components/notifications/NotificationsPage";
+import SupportHistory from "./Pages/profile/SupportHistory";
+
+// Auth Pages
+import LoginPage from "./Pages/auth/LoginPage";
+import RegisterPage from "./Pages/auth/RegisterPage";
+import ForgotPasswordPage from "./Pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./Pages/auth/ResetPasswordPage";
+import FirebasePasswordResetSuccess from "./Pages/auth/FirebasePasswordResetSuccess";
+import AdminLoginForm from "./Pages/auth/AdminLoginForm";
+
+// Admin Pages (Merging P1 & P2 Admin Routes)
+import AdminDashboard from "./Pages/admin/AdminDashboard";
+
+// Info Pages
 import AboutPage from "./Pages/AboutPage";
 import ContactPage from "./Pages/ContactPage";
 import CareersPage from "./Pages/CareersPage";
@@ -40,30 +64,14 @@ import TrackOrder from "./Pages/TrackOrder";
 import SizeGuide from "./Pages/SizeGuide";
 import PrivacyPage from "./Pages/PrivacyPage";
 import TermsPage from "./Pages/TermsPage";
+
+// Layout & Context
 import ScrollToTop from "./components/layout/ScrollToTop";
 import ProtectedRoute from "./context/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import SellerSupportTicketsPage from "./Pages/seller/SellerSupportTicketsPage";
-import SellerReturnsPage from "./Pages/seller/SellerReturnsPage";
-import SellerReviewsPage from "./Pages/seller/SellerReviewsPage";
-import NotificationsPage from "./components/notifications/NotificationsPage";
 import CategoryProducts from "./components/home/CategoryProducts";
-import CartPage from "./components/cart/cart";
-import SellerLayout from "./Pages/seller/SellerLayout";
-import LoginPage from "./Pages/auth/LoginPage";
-import RegisterPage from "./Pages/auth/RegisterPage";
-import ForgotPasswordPage from "./Pages/auth/ForgotPasswordPage";
-import ResetPasswordPage from "./Pages/auth/ResetPasswordPage";
-import FirebasePasswordResetSuccess from "./Pages/auth/FirebasePasswordResetSuccess";
-import AdminDashboard from "./Pages/admin/AdminDashboard";
-import AdminUsersPage from "./Pages/admin/AdminUsersPage";
-import AdminSellersPage from "./Pages/admin/AdminSellersPage";
-import AdminOrdersPage from "./Pages/admin/AdminOrdersPage";
-import AdminComplaintsPage from "./Pages/admin/AdminComplaintsPage";
-import AdminDeliveryPage from "./Pages/admin/AdminDeliveryPage";
-import AdminLoginForm from "./Pages/auth/AdminLoginForm";
 
 const HomePage = () => (
   <>
@@ -80,9 +88,10 @@ function App() {
   const { isLoading } = useAuth();
   const location = useLocation();
 
+  // Logic from P2: Hide Header/Footer on Dashboard and Admin pages
   const isDashboardArea =
-    location.pathname.startsWith("/seller") ||
-    location.pathname.startsWith("/admin");
+    (location.pathname.startsWith("/seller") || location.pathname.startsWith("/admin")) &&
+    !location.pathname.includes("/login");
 
   if (isLoading) {
     return (
@@ -94,6 +103,7 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Header logic from P2 */}
       {!isDashboardArea && <Header />}
 
       <ScrollToTop />
@@ -105,7 +115,6 @@ function App() {
           <Route path="/products/:category" element={<ProductsPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
           <Route path="/cart" element={<CartPage />} />
-
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/careers" element={<CareersPage />} />
@@ -119,84 +128,26 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
 
-          {/* --- AUTH ROUTES --- */}
+          {/* --- AUTH ROUTES (P2 Style) --- */}
           <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/register"
-            element={<Navigate to="/register/role" replace />}
-          />
+          <Route path="/register" element={<Navigate to="/register/role" replace />} />
           <Route path="/register/role" element={<RegisterPage />} />
-          <Route
-            path="/auth/forgot-password"
-            element={<ForgotPasswordPage />}
-          />
+          <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-          <Route
-            path="/auth/password-reset-success"
-            element={<FirebasePasswordResetSuccess />}
-          />
-
+          <Route path="/auth/password-reset-success" element={<FirebasePasswordResetSuccess />} />
           <Route path="/admin/login" element={<AdminLoginForm />} />
 
           {/* --- USER PROTECTED ROUTES --- */}
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute>
-                <CheckoutPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order-success/:id"
-            element={
-              <ProtectedRoute>
-                <OrderSuccessPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile/orders"
-            element={
-              <ProtectedRoute>
-                <OrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile/orders/:id"
-            element={
-              <ProtectedRoute>
-                <OrderDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/wishlist"
-            element={
-              <ProtectedRoute>
-                <WishlistPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+          <Route path="/order-success/:id" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          <Route path="/profile/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+          <Route path="/profile/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+          <Route path="/profile/support" element={<ProtectedRoute><SupportHistory /></ProtectedRoute>} />
 
-          {/* --- SELLER DASHBOARD NESTED ROUTES --- */}
+          {/* --- SELLER DASHBOARD NESTED ROUTES (P2 Feature) --- */}
           <Route
             path="/seller"
             element={
@@ -210,85 +161,27 @@ function App() {
             <Route path="orders/list" element={<SellerOrdersListPage />} />
             <Route path="analytics/revenue" element={<SellerRevenuePage />} />
             <Route path="analytics/rating" element={<SellerRatingPage />} />
-            <Route
-              path="analytics/customers"
-              element={<SellerCustomerPage />}
-            />
+            <Route path="analytics/customers" element={<SellerCustomerPage />} />
             <Route path="add-product" element={<AddProductPage />} />
-            <Route
-              path="product-details/:id"
-              element={<SellerProductDetailsPage />}
-            />
+            <Route path="product-details/:id" element={<SellerProductDetailsPage />} />
             <Route path="edit-product/:id" element={<EditProductPage />} />
             <Route path="analytics/reviews" element={<SellerReviewsPage />} />
-            <Route
-              path="support/tickets"
-              element={<SellerSupportTicketsPage />}
-            />
+            <Route path="support/tickets" element={<SellerSupport />} />
+            <Route path="customer-disputes" element={<SellerCustomerIssues />} />
             <Route path="returns/requests" element={<SellerReturnsPage />} />
             <Route path="profile" element={<SellerProfilePage />} />
             <Route path="setup" element={<SellerSetupPage />} />
             <Route path="verify" element={<SellerVerificationPage />} />
           </Route>
 
-          {/* --- ADMIN PROTECTED ROUTES --- */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminUsersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/sellers"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminSellersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/orders"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminOrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/complaints"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminComplaintsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/delivery"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDeliveryPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/categories/:categoryName"
-            element={<CategoryProducts />}
-          />
+          {/* --- ADMIN PROTECTED ROUTES (Combined P1 & P2) --- */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/categories/:categoryName" element={<CategoryProducts />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
+      {/* Footer logic from P2 */}
       {!isDashboardArea && <Footer />}
 
       <ToastContainer position="top-right" autoClose={3000} />

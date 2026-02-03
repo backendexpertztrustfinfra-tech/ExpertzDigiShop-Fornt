@@ -1,1071 +1,562 @@
-// "use client"
-
-// import { useState, useRef } from "react"
-// import { useNavigate, Link } from "react-router-dom"
-// import { ArrowLeft, Upload, X, Loader2, ChevronRight, Check } from "lucide-react"
-// import { Button } from "@/components/ui/button"
-// import { Input } from "@/components/ui/input"
-// import { Label } from "@/components/ui/label"
-// import { Textarea } from "@/components/ui/textarea"
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// import { Checkbox } from "@/components/ui/checkbox"
-// import { useAuth } from "@/context/AuthContext"
-// import { toast, ToastContainer } from "react-toastify"
-// import "react-toastify/dist/ReactToastify.css"
-
-// const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
-
-// export default function AddProductPage() {
-//   const navigate = useNavigate()
-//   const { userToken } = useAuth()
-//   const fileInputRef = useRef(null)
-
-//   const [currentStep, setCurrentStep] = useState(1)
-//   const [formData, setFormData] = useState({
-//     // Basic Info
-//     name: "",
-//     genericName: "",
-//     description: "",
-//     brand: "",
-//     category: "",
-//     subcategory: "",
-
-//     // Product Details
-//     size: "",
-//     color: "",
-//     material: "",
-//     pattern: "",
-//     trends: "",
-//     occasion: "",
-//     compartments: "",
-//     handles: "",
-//     netQuantity: "",
-
-//     // Pricing & Inventory
-//     price: "",
-//     originalPrice: "",
-//     discount: "0",
-//     stock: "",
-//     sku: "",
-
-//     // Tax & Compliance
-//     gst: "18",
-//     hsn: "",
-//     countryOfOrigin: "India",
-
-//     // Dimensions & Weight
-//     weight: "",
-//     length: "",
-//     width: "",
-//     height: "",
-//     productDimensions: "",
-
-//     // Manufacturer/Packer/Importer
-//     manufacturerName: "",
-//     manufacturerAddress: "",
-//     manufacturerPincode: "",
-//     packerName: "",
-//     packerAddress: "",
-//     packerPincode: "",
-//     importerName: "",
-//     importerAddress: "",
-//     importerPincode: "",
-
-//     // Shipping & Returns
-//     shippingTime: "5-7 Days",
-//     freeShipping: false,
-//     shippingCharge: "0",
-//     returnDays: "30",
-//     returnPolicy: "30-day return policy available",
-//     codAvailable: true,
-//   })
-
-//   const [images, setImages] = useState({
-//     frontView: null,
-//     backView: null,
-//     sideView: null,
-//     additional: [],
-//   })
-
-//   const [isLoading, setIsLoading] = useState(false)
-
-//   const categories = [
-//     { value: "Fashion", label: "Fashion" },
-//     { value: "Electronics", label: "Electronics" },
-//     { value: "Toys", label: "Toys" },
-//     { value: "Kids", label: "Kids" },
-//     { value: "Beauty", label: "Beauty & Health" },
-//     { value: "Sports", label: "Sports & Fitness" },
-//     { value: "Books", label: "Books" },
-//     { value: "Accessories", label: "Accessories" },
-//     { value: "Automotive", label: "Automotive" },
-//   ]
-
-//   const handleInputChange = (field, value) => {
-//     setFormData((prev) => ({ ...prev, [field]: value }))
-//   }
-
-//   const handleImageUpload = (type, file) => {
-//     if (type === "additional") {
-//       if (images.additional.length >= 3) {
-//         toast.warn("Maximum 3 additional images allowed")
-//         return
-//       }
-//       setImages((prev) => ({
-//         ...prev,
-//         additional: [...prev.additional, file],
-//       }))
-//     } else {
-//       setImages((prev) => ({ ...prev, [type]: file }))
-//     }
-//   }
-
-//   const removeImage = (type, index = null) => {
-//     if (type === "additional" && index !== null) {
-//       setImages((prev) => ({
-//         ...prev,
-//         additional: prev.additional.filter((_, i) => i !== index),
-//       }))
-//     } else {
-//       setImages((prev) => ({ ...prev, [type]: null }))
-//     }
-//   }
-
-//   const validateStep = (step) => {
-//     if (step === 1) {
-//       const required = ["category"]
-//       const missing = required.filter((f) => !formData[f])
-//       if (missing.length) {
-//         toast.error("Please select a category")
-//         return false
-//       }
-//     } else if (step === 2) {
-//       const required = ["name", "description", "price", "stock"]
-//       const missing = required.filter((f) => !formData[f])
-//       if (missing.length) {
-//         toast.error(`Please fill: ${missing.join(", ")}`)
-//         return false
-//       }
-//     }
-//     return true
-//   }
-
-//   const nextStep = () => {
-//     if (validateStep(currentStep)) {
-//       setCurrentStep((prev) => Math.min(prev + 1, 3))
-//     }
-//   }
-
-//   const prevStep = () => {
-//     setCurrentStep((prev) => Math.max(prev - 1, 1))
-//   }
-
-//   const handleSubmit = async () => {
-//     if (!validateStep(2)) return
-
-//     if (!userToken) {
-//       toast.error("Please login again")
-//       navigate("/login")
-//       return
-//     }
-
-//     setIsLoading(true)
-//     const payload = new FormData()
-
-//     // Add all images
-//     const allImages = [images.frontView, images.backView, images.sideView, ...images.additional].filter(Boolean)
-//     allImages.forEach((file) => payload.append("images", file))
-
-//     // Add all form data
-//     Object.entries(formData).forEach(([key, value]) => {
-//       if (value !== "" && value !== null && value !== undefined) {
-//         payload.append(key, value)
-//       }
-//     })
-
-//     try {
-//       const response = await fetch(`${API_BASE_URL}/sellers/products`, {
-//         method: "POST",
-//         headers: { Authorization: `Bearer ${userToken}` },
-//         body: payload,
-//       })
-
-//       const data = await response.json()
-//       if (!response.ok) return toast.error(data.message || "Failed to add product")
-
-//       toast.success("Product added successfully!")
-//       setTimeout(() => navigate("/seller/dashboard"), 1500)
-//     } catch (error) {
-//       toast.error("Network error while adding product")
-//     } finally {
-//       setIsLoading(false)
-//     }
-//   }
-
-//   const steps = [
-//     { number: 1, title: "Select Category", subtitle: "Choose product category" },
-//     { number: 2, title: "Add Product Details", subtitle: "Fill all product information" },
-//     { number: 3, title: "Upload Images", subtitle: "Add product photos" },
-//   ]
-
-//   return (
-//     <div className="min-h-screen bg-gray-50 font-sans">
-//       <ToastContainer position="top-right" autoClose={4000} />
-
-//       {isLoading && (
-//         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
-//           <div className="flex items-center gap-3 bg-white px-8 py-5 rounded-2xl shadow-2xl">
-//             <Loader2 className="animate-spin text-indigo-600 w-7 h-7" />
-//             <p className="text-gray-800 font-semibold text-lg">Creating product...</p>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Header */}
-//       <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-//         <div className="max-w-6xl mx-auto px-4 py-4">
-//           <div className="flex items-center justify-between">
-//             <div className="flex items-center gap-4">
-//               <Link to="/seller/dashboard">
-//                 <Button variant="ghost" size="icon" className="rounded-full hover:bg-gray-100">
-//                   <ArrowLeft className="h-5 w-5 text-gray-700" />
-//                 </Button>
-//               </Link>
-//               <div>
-//                 <h1 className="text-2xl font-bold text-gray-900">Add Single Catalog</h1>
-//                 <p className="text-sm text-gray-600 mt-0.5">Fill product details to list on your store</p>
-//               </div>
-//             </div>
-//             <a
-//               href="https://www.youtube.com/watch?v=example"
-//               target="_blank"
-//               rel="noopener noreferrer"
-//               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
-//             >
-//               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-//                 <path d="M10 0C4.477 0 0 4.477 0 10s4.477 10 10 10 10-4.477 10-10S15.523 0 10 0zm3.5 10.5l-5 3.5V7l5 3.5z" />
-//               </svg>
-//               Learn to upload single catalog?
-//             </a>
-//           </div>
-
-//           {/* Progress Steps */}
-//           <div className="flex items-center justify-center gap-4 mt-6">
-//             {steps.map((step, idx) => (
-//               <div key={step.number} className="flex items-center">
-//                 <div className="flex flex-col items-center">
-//                   <div
-//                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition ${
-//                       currentStep > step.number
-//                         ? "bg-green-500 text-white"
-//                         : currentStep === step.number
-//                           ? "bg-indigo-600 text-white"
-//                           : "bg-gray-200 text-gray-500"
-//                     }`}
-//                   >
-//                     {currentStep > step.number ? <Check className="w-5 h-5" /> : step.number}
-//                   </div>
-//                   <div className="text-center mt-2">
-//                     <p
-//                       className={`text-sm font-semibold ${
-//                         currentStep >= step.number ? "text-gray-900" : "text-gray-500"
-//                       }`}
-//                     >
-//                       {step.title}
-//                     </p>
-//                     <p className="text-xs text-gray-500">{step.subtitle}</p>
-//                   </div>
-//                 </div>
-//                 {idx < steps.length - 1 && (
-//                   <ChevronRight
-//                     className={`w-6 h-6 mx-4 ${currentStep > step.number ? "text-green-500" : "text-gray-300"}`}
-//                   />
-//                 )}
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Main Content */}
-//       <div className="max-w-6xl mx-auto px-4 py-8">
-//         {/* Step 1: Select Category */}
-//         {currentStep === 1 && (
-//           <Card className="shadow-lg border-0">
-//             <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-purple-50">
-//               <CardTitle className="text-xl font-bold text-gray-900">Search Category</CardTitle>
-//             </CardHeader>
-//             <CardContent className="p-8">
-//               <div className="mb-6">
-//                 <Input
-//                   type="text"
-//                   placeholder="Try Sarees, Toys, Charger, Mugs and more..."
-//                   className="h-12 text-base border-2 border-gray-300 focus:border-indigo-500 rounded-lg"
-//                 />
-//               </div>
-
-//               <div className="space-y-3">
-//                 <div className="flex items-center gap-2 mb-4">
-//                   <div className="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
-//                     <span className="text-indigo-600 font-bold text-sm">★</span>
-//                   </div>
-//                   <h3 className="font-bold text-gray-900">Your Categories</h3>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-//                   {categories.map((cat) => (
-//                     <button
-//                       key={cat.value}
-//                       onClick={() => {
-//                         handleInputChange("category", cat.value)
-//                         nextStep()
-//                       }}
-//                       className={`flex items-center justify-between p-4 border-2 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition ${
-//                         formData.category === cat.value ? "border-indigo-600 bg-indigo-50" : "border-gray-200 bg-white"
-//                       }`}
-//                     >
-//                       <div className="flex items-center gap-3">
-//                         <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center">
-//                           <span className="text-2xl">{cat.value === "Fashion" ? "👕" : "📦"}</span>
-//                         </div>
-//                         <span className="font-semibold text-gray-900">{cat.label}</span>
-//                       </div>
-//                       <ChevronRight className="w-5 h-5 text-gray-400" />
-//                     </button>
-//                   ))}
-//                 </div>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         )}
-
-//         {/* Step 2: Add Product Details */}
-//         {currentStep === 2 && (
-//           <div className="space-y-6">
-//             {/* Product, Size and Inventory Section */}
-//             <Card className="shadow-lg border-0">
-//               <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-cyan-50">
-//                 <CardTitle className="text-lg font-bold text-gray-900">Product, Size and Inventory</CardTitle>
-//               </CardHeader>
-//               <CardContent className="p-6 space-y-6">
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Product Name <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Input
-//                       value={formData.name}
-//                       onChange={(e) => handleInputChange("name", e.target.value)}
-//                       placeholder="Enter Product Name"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Size</Label>
-//                     <Select value={formData.size} onValueChange={(v) => handleInputChange("size", v)}>
-//                       <SelectTrigger className="h-11 border-2">
-//                         <SelectValue placeholder="Select" />
-//                       </SelectTrigger>
-//                       <SelectContent>
-//                         <SelectItem value="S">Small</SelectItem>
-//                         <SelectItem value="M">Medium</SelectItem>
-//                         <SelectItem value="L">Large</SelectItem>
-//                         <SelectItem value="XL">Extra Large</SelectItem>
-//                         <SelectItem value="Free Size">Free Size</SelectItem>
-//                       </SelectContent>
-//                     </Select>
-//                   </div>
-//                 </div>
-
-//                 <div className="space-y-2">
-//                   <Label className="text-sm font-semibold text-gray-700">
-//                     Product Description <span className="text-red-500">*</span>
-//                   </Label>
-//                   <Textarea
-//                     rows={4}
-//                     value={formData.description}
-//                     onChange={(e) => handleInputChange("description", e.target.value)}
-//                     placeholder="Enter Description"
-//                     className="border-2 focus:border-indigo-500 resize-none"
-//                   />
-//                   <p className="text-xs text-gray-500">0/1400</p>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       GST <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Select value={formData.gst} onValueChange={(v) => handleInputChange("gst", v)}>
-//                       <SelectTrigger className="h-11 border-2">
-//                         <SelectValue />
-//                       </SelectTrigger>
-//                       <SelectContent>
-//                         <SelectItem value="0">0%</SelectItem>
-//                         <SelectItem value="5">5%</SelectItem>
-//                         <SelectItem value="12">12%</SelectItem>
-//                         <SelectItem value="18">18%</SelectItem>
-//                         <SelectItem value="28">28%</SelectItem>
-//                       </SelectContent>
-//                     </Select>
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       HSN Code <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Input
-//                       value={formData.hsn}
-//                       onChange={(e) => handleInputChange("hsn", e.target.value)}
-//                       placeholder="Enter HSN Code"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                     <a href="#" className="text-xs text-indigo-600 hover:underline">
-//                       Find Relevant HSN Code →
-//                     </a>
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Net Weight (gms) <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.weight}
-//                       onChange={(e) => handleInputChange("weight", e.target.value)}
-//                       placeholder="Enter Net Weight (gms)"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Style code/ Product ID (optional)</Label>
-//                     <Input
-//                       value={formData.sku}
-//                       onChange={(e) => handleInputChange("sku", e.target.value)}
-//                       placeholder="Enter Style code/ Product ID (optional)"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Stock Quantity <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.stock}
-//                       onChange={(e) => handleInputChange("stock", e.target.value)}
-//                       placeholder="0"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Product Details Section */}
-//             <Card className="shadow-lg border-0">
-//               <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
-//                 <CardTitle className="text-lg font-bold text-gray-900">Product Details</CardTitle>
-//               </CardHeader>
-//               <CardContent className="p-6 space-y-6">
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Trends</Label>
-//                     <Input
-//                       value={formData.trends}
-//                       onChange={(e) => handleInputChange("trends", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Generic Name</Label>
-//                     <Input
-//                       value={formData.genericName}
-//                       onChange={(e) => handleInputChange("genericName", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Compartment Closure</Label>
-//                     <Input
-//                       value={formData.compartments}
-//                       onChange={(e) => handleInputChange("compartments", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Handles</Label>
-//                     <Input
-//                       value={formData.handles}
-//                       onChange={(e) => handleInputChange("handles", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Net Quantity (N)</Label>
-//                     <Input
-//                       value={formData.netQuantity}
-//                       onChange={(e) => handleInputChange("netQuantity", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Occasion</Label>
-//                     <Input
-//                       value={formData.occasion}
-//                       onChange={(e) => handleInputChange("occasion", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Pattern</Label>
-//                     <Input
-//                       value={formData.pattern}
-//                       onChange={(e) => handleInputChange("pattern", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Product Dimension Unit</Label>
-//                     <Input
-//                       value={formData.productDimensions}
-//                       onChange={(e) => handleInputChange("productDimensions", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Product Height</Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.height}
-//                       onChange={(e) => handleInputChange("height", e.target.value)}
-//                       placeholder="Enter Product Height"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Product Length</Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.length}
-//                       onChange={(e) => handleInputChange("length", e.target.value)}
-//                       placeholder="Enter Product Length"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Product Width</Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.width}
-//                       onChange={(e) => handleInputChange("width", e.target.value)}
-//                       placeholder="Enter Product Width"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Country Of Origin</Label>
-//                     <Input
-//                       value={formData.countryOfOrigin}
-//                       onChange={(e) => handleInputChange("countryOfOrigin", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Brand</Label>
-//                     <Input
-//                       value={formData.brand}
-//                       onChange={(e) => handleInputChange("brand", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Color</Label>
-//                     <Input
-//                       value={formData.color}
-//                       onChange={(e) => handleInputChange("color", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Material</Label>
-//                     <Input
-//                       value={formData.material}
-//                       onChange={(e) => handleInputChange("material", e.target.value)}
-//                       placeholder="Select"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Manufacturer/Packer/Importer Section */}
-//             <Card className="shadow-lg border-0">
-//               <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-orange-50">
-//                 <CardTitle className="text-lg font-bold text-gray-900">
-//                   Manufacturer / Packer / Importer Details
-//                 </CardTitle>
-//               </CardHeader>
-//               <CardContent className="p-6 space-y-6">
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Manufacturer Name</Label>
-//                     <Input
-//                       value={formData.manufacturerName}
-//                       onChange={(e) => handleInputChange("manufacturerName", e.target.value)}
-//                       placeholder="Enter Manufacturer Name"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Manufacturer Address</Label>
-//                     <Input
-//                       value={formData.manufacturerAddress}
-//                       onChange={(e) => handleInputChange("manufacturerAddress", e.target.value)}
-//                       placeholder="Enter Manufacturer Address"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Manufacturer Pincode</Label>
-//                     <Input
-//                       value={formData.manufacturerPincode}
-//                       onChange={(e) => handleInputChange("manufacturerPincode", e.target.value)}
-//                       placeholder="Enter Manufacturer Pincode"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-
-//                 <div className="flex items-center space-x-2">
-//                   <Checkbox id="sameAsManufacturer" />
-//                   <Label htmlFor="sameAsManufacturer" className="text-sm text-gray-700 cursor-pointer">
-//                     Same as Manufacturer Details
-//                   </Label>
-//                 </div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Packer Name</Label>
-//                     <Input
-//                       value={formData.packerName}
-//                       onChange={(e) => handleInputChange("packerName", e.target.value)}
-//                       placeholder="Enter Packer Name"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Packer Address</Label>
-//                     <Input
-//                       value={formData.packerAddress}
-//                       onChange={(e) => handleInputChange("packerAddress", e.target.value)}
-//                       placeholder="Enter Packer Address"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Packer Pincode</Label>
-//                     <Input
-//                       value={formData.packerPincode}
-//                       onChange={(e) => handleInputChange("packerPincode", e.target.value)}
-//                       placeholder="Enter Packer Pincode"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Importer Name</Label>
-//                     <Input
-//                       value={formData.importerName}
-//                       onChange={(e) => handleInputChange("importerName", e.target.value)}
-//                       placeholder="Enter Importer Name"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Importer Address</Label>
-//                     <Input
-//                       value={formData.importerAddress}
-//                       onChange={(e) => handleInputChange("importerAddress", e.target.value)}
-//                       placeholder="Enter Importer Address"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Importer Pincode</Label>
-//                     <Input
-//                       value={formData.importerPincode}
-//                       onChange={(e) => handleInputChange("importerPincode", e.target.value)}
-//                       placeholder="Enter Importer Pincode"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Pricing Section */}
-//             <Card className="shadow-lg border-0">
-//               <CardHeader className="border-b bg-gradient-to-r from-rose-50 to-pink-50">
-//                 <CardTitle className="text-lg font-bold text-gray-900">Pricing & Discount</CardTitle>
-//               </CardHeader>
-//               <CardContent className="p-6">
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Selling Price <span className="text-red-500">*</span>
-//                     </Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.price}
-//                       onChange={(e) => handleInputChange("price", e.target.value)}
-//                       placeholder="0"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">MRP / Original Price</Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.originalPrice}
-//                       onChange={(e) => handleInputChange("originalPrice", e.target.value)}
-//                       placeholder="0"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">Discount %</Label>
-//                     <Input
-//                       type="number"
-//                       value={formData.discount}
-//                       onChange={(e) => handleInputChange("discount", e.target.value)}
-//                       placeholder="0"
-//                       className="h-11 border-2 focus:border-indigo-500"
-//                     />
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Compliance Notice */}
-//             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-xs text-gray-700 leading-relaxed">
-//               By listing your products on Meesho's platform, you agree to comply with the applicable T&C of the
-//               platform, as updated from time to time. You confirm that all product information, including labels,
-//               claims, and disclosures etc., complies with the Legal Metrology Act, 2009, Bureau of Indian Standards Act,
-//               2016 read with applicable Quality Control Orders, and all other applicable laws, rules and regulations.
-//               You also confirm that you are authorized to list and sell your products and hold all necessary licenses,
-//               registrations, and permits as required under applicable law. You accept full responsibility for your
-//               listings, and Meesho bears no liability for any of your acts or omissions.
-//             </div>
-//           </div>
-//         )}
-
-//         {/* Step 3: Upload Images */}
-//         {currentStep === 3 && (
-//           <Card className="shadow-lg border-0">
-//             <CardHeader className="border-b bg-gradient-to-r from-violet-50 to-purple-50">
-//               <CardTitle className="text-lg font-bold text-gray-900">Upload Product Images</CardTitle>
-//               <p className="text-sm text-gray-600 mt-2">Follow guidelines to reduce quality check failure</p>
-//             </CardHeader>
-//             <CardContent className="p-6 space-y-6">
-//               {/* Image Guidelines */}
-//               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-//                 <h4 className="font-semibold text-gray-900 mb-2">Image Guidelines</h4>
-//                 <ul className="text-sm text-gray-700 space-y-1">
-//                   <li>1. Images with text/Watermark are not acceptable in primary images.</li>
-//                   <li>2. Product image should not have any text</li>
-//                   <li>3. Please add solo product image without any props.</li>
-//                 </ul>
-//                 <a href="#" className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
-//                   View Full Image Guidelines →
-//                 </a>
-//               </div>
-
-//               {/* Image Upload Sections */}
-//               <div className="space-y-4">
-//                 <div className="text-sm font-semibold text-gray-700 mb-3">Add images with details listed here</div>
-
-//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//                   {/* Front View */}
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Front View <span className="text-red-500">*</span>
-//                     </Label>
-//                     <div className="relative">
-//                       {!images.frontView ? (
-//                         <label
-//                           htmlFor="frontView"
-//                           className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition"
-//                         >
-//                           <Upload className="w-8 h-8 text-gray-400 mb-2" />
-//                           <p className="text-sm text-gray-600">Upload front view image</p>
-//                           <input
-//                             id="frontView"
-//                             type="file"
-//                             accept="image/*"
-//                             className="hidden"
-//                             onChange={(e) => e.target.files[0] && handleImageUpload("frontView", e.target.files[0])}
-//                           />
-//                         </label>
-//                       ) : (
-//                         <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-green-500">
-//                           <img
-//                             src={URL.createObjectURL(images.frontView) || "/placeholder.svg"}
-//                             alt="Front view"
-//                             className="w-full h-full object-cover"
-//                           />
-//                           <button
-//                             onClick={() => removeImage("frontView")}
-//                             className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full"
-//                           >
-//                             <X className="w-4 h-4" />
-//                           </button>
-//                         </div>
-//                       )}
-//                     </div>
-//                   </div>
-
-//                   {/* Back View */}
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Back View <span className="text-red-500">*</span>
-//                     </Label>
-//                     <div className="relative">
-//                       {!images.backView ? (
-//                         <label
-//                           htmlFor="backView"
-//                           className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition"
-//                         >
-//                           <Upload className="w-8 h-8 text-gray-400 mb-2" />
-//                           <p className="text-sm text-gray-600">Upload Back View Image</p>
-//                           <input
-//                             id="backView"
-//                             type="file"
-//                             accept="image/*"
-//                             className="hidden"
-//                             onChange={(e) => e.target.files[0] && handleImageUpload("backView", e.target.files[0])}
-//                           />
-//                         </label>
-//                       ) : (
-//                         <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-green-500">
-//                           <img
-//                             src={URL.createObjectURL(images.backView) || "/placeholder.svg"}
-//                             alt="Back view"
-//                             className="w-full h-full object-cover"
-//                           />
-//                           <button
-//                             onClick={() => removeImage("backView")}
-//                             className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full"
-//                           >
-//                             <X className="w-4 h-4" />
-//                           </button>
-//                         </div>
-//                       )}
-//                     </div>
-//                   </div>
-
-//                   {/* Side View */}
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-semibold text-gray-700">
-//                       Side View <span className="text-red-500">*</span>
-//                     </Label>
-//                     <div className="relative">
-//                       {!images.sideView ? (
-//                         <label
-//                           htmlFor="sideView"
-//                           className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition"
-//                         >
-//                           <Upload className="w-8 h-8 text-gray-400 mb-2" />
-//                           <p className="text-sm text-gray-600">Upload side view angle</p>
-//                           <input
-//                             id="sideView"
-//                             type="file"
-//                             accept="image/*"
-//                             className="hidden"
-//                             onChange={(e) => e.target.files[0] && handleImageUpload("sideView", e.target.files[0])}
-//                           />
-//                         </label>
-//                       ) : (
-//                         <div className="relative w-full h-40 rounded-lg overflow-hidden border-2 border-green-500">
-//                           <img
-//                             src={URL.createObjectURL(images.sideView) || "/placeholder.svg"}
-//                             alt="Side view"
-//                             className="w-full h-full object-cover"
-//                           />
-//                           <button
-//                             onClick={() => removeImage("sideView")}
-//                             className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full"
-//                           >
-//                             <X className="w-4 h-4" />
-//                           </button>
-//                         </div>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-
-//                 {/* Uploaded Images Section */}
-//                 {images.additional.length > 0 && (
-//                   <div className="mt-6">
-//                     <Label className="text-sm font-semibold text-gray-700 mb-3 block">Uploaded Images</Label>
-//                     <div className="flex gap-4 flex-wrap">
-//                       {images.additional.map((file, idx) => (
-//                         <div
-//                           key={idx}
-//                           className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-300"
-//                         >
-//                           <img
-//                             src={URL.createObjectURL(file) || "/placeholder.svg"}
-//                             alt={`Additional ${idx + 1}`}
-//                             className="w-full h-full object-cover"
-//                           />
-//                           <button
-//                             onClick={() => removeImage("additional", idx)}
-//                             className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-0.5 rounded-full"
-//                           >
-//                             <X className="w-3 h-3" />
-//                           </button>
-//                         </div>
-//                       ))}
-
-//                       {images.additional.length < 3 && (
-//                         <label
-//                           htmlFor="additionalImages"
-//                           className="flex items-center justify-center w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer"
-//                         >
-//                           <div className="text-center">
-//                             <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-//                             <p className="text-xs text-indigo-600 font-semibold">+ Add Images</p>
-//                           </div>
-//                           <input
-//                             id="additionalImages"
-//                             type="file"
-//                             accept="image/*"
-//                             className="hidden"
-//                             onChange={(e) => e.target.files[0] && handleImageUpload("additional", e.target.files[0])}
-//                           />
-//                         </label>
-//                       )}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* Front Image Section */}
-//                 {!images.additional.length && (
-//                   <div className="mt-6">
-//                     <Label className="text-sm font-semibold text-gray-700 mb-3 block">
-//                       Front Image <span className="text-red-500">*</span>
-//                     </Label>
-//                     <p className="text-xs text-gray-600 mb-2">Please provide only front image for each product</p>
-//                     <div className="flex items-center gap-4">
-//                       <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-//                         {images.frontView ? (
-//                           <img
-//                             src={URL.createObjectURL(images.frontView) || "/placeholder.svg"}
-//                             alt="Front"
-//                             className="w-full h-full object-cover rounded-lg"
-//                           />
-//                         ) : (
-//                           <div className="text-center text-gray-400 text-xs">Front Image</div>
-//                         )}
-//                       </div>
-//                       <label
-//                         htmlFor="additionalImages"
-//                         className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-indigo-400 rounded-lg hover:bg-indigo-50 cursor-pointer"
-//                       >
-//                         <Upload className="w-8 h-8 text-indigo-600 mb-2" />
-//                         <p className="text-sm text-indigo-600 font-semibold">+ Add Images</p>
-//                         <input
-//                           id="additionalImages"
-//                           type="file"
-//                           accept="image/*"
-//                           className="hidden"
-//                           onChange={(e) => e.target.files[0] && handleImageUpload("additional", e.target.files[0])}
-//                         />
-//                       </label>
-//                     </div>
-//                   </div>
-//                 )}
-//               </div>
-//             </CardContent>
-//           </Card>
-//         )}
-
-//         {/* Navigation Buttons */}
-//         <div className="flex items-center justify-between mt-8 pb-8">
-//           <Button
-//             type="button"
-//             variant="outline"
-//             onClick={currentStep === 1 ? () => navigate("/seller/dashboard") : prevStep}
-//             className="px-8 h-12 text-base font-semibold border-2"
-//           >
-//             {currentStep === 1 ? "Discard Catalog" : "Go Back"}
-//           </Button>
-
-//           {currentStep < 3 ? (
-//             <Button
-//               type="button"
-//               onClick={nextStep}
-//               className="px-10 h-12 text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"
-//             >
-//               Continue
-//             </Button>
-//           ) : (
-//             <Button
-//               type="button"
-//               onClick={handleSubmit}
-//               disabled={isLoading}
-//               className="px-10 h-12 text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"
-//             >
-//               {isLoading ? "Submitting..." : "Submit Catalog"}
-//             </Button>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api";
+
+// --- CONSTANTS ---
+const COLOR_SUGGESTIONS = ["Red", "Blue", "Black", "White", "Green", "Yellow", "Pink", "Purple", "Gray", "Brown"];
+const MATERIAL_SUGGESTIONS = ["Cotton", "Silk", "Polyester", "Wool", "Linen", "Denim", "Leather", "Synthetic", "Blend"];
+const SIZE_SUGGESTIONS = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
+const COUNTRIES = ["India", "USA", "UK", "China", "Japan", "Germany", "France", "Australia", "Canada", "Brazil"];
+
+const CITIES = {
+  India: ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad"],
+  USA: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"],
+  UK: ["London", "Manchester", "Birmingham", "Leeds"],
+  China: ["Beijing", "Shanghai", "Shenzhen", "Guangzhou"],
+  Japan: ["Tokyo", "Osaka", "Kyoto", "Yokohama"],
+};
+
+// --- HELPER COMPONENTS ---
+
+const SmartDropdown = ({ label, value, suggestions, onChange, onCustomAdd, required = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [filteredSuggestions, setFilteredSuggestions] = useState(suggestions);
+
+  useEffect(() => {
+    setFilteredSuggestions(suggestions.filter((s) => s.toLowerCase().includes(customInput.toLowerCase())));
+  }, [customInput, suggestions]);
+
+  const handleSelect = (suggestion) => {
+    onChange(suggestion);
+    setCustomInput("");
+    setIsOpen(false);
+  };
+
+  const handleAddCustom = () => {
+    if (customInput.trim()) {
+      onChange(customInput);
+      onCustomAdd?.(customInput);
+      setCustomInput("");
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div className="relative w-full">
+      <label className="block text-sm font-semibold mb-1.5 text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div
+        className="border-2 border-gray-300 rounded-lg p-3 cursor-pointer bg-white hover:border-blue-500 transition shadow-sm"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className={value ? "text-gray-900" : "text-gray-400"}>{value || "Select or type..."}</div>
+      </div>
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+          <input
+            type="text"
+            placeholder="Search or type custom..."
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            className="w-full p-3 border-b focus:outline-none sticky top-0 bg-white"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="p-1">
+            {filteredSuggestions.map((suggestion) => (
+              <div key={suggestion} onClick={() => handleSelect(suggestion)} className="p-2.5 hover:bg-blue-50 cursor-pointer rounded-md text-sm text-gray-700 transition">
+                {suggestion}
+              </div>
+            ))}
+            {customInput && !filteredSuggestions.includes(customInput) && (
+              <button type="button" onClick={handleAddCustom} className="w-full p-2.5 mt-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-bold shadow-md">
+                + Add "{customInput}"
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ImageUploader = ({ label, onChange, preview }) => (
+  <div className="space-y-2">
+    <label className="block text-sm font-semibold text-gray-700">{label}</label>
+    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer relative group">
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onChange(file);
+        }}
+        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+      />
+      {preview ? (
+        <div className="space-y-2">
+          <img src={preview || "/placeholder.svg"} alt="Preview" className="h-40 mx-auto object-contain rounded-lg shadow-sm" />
+          <p className="text-xs text-blue-600 font-bold group-hover:underline">Click to change image</p>
+        </div>
+      ) : (
+        <div className="py-4">
+          <div className="text-3xl mb-2">📷</div>
+          <p className="text-sm font-medium text-gray-600">Click or drag image here</p>
+          <p className="text-xs text-gray-400 mt-1">JPG, PNG up to 5MB</p>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// --- MAIN PAGE ---
+
+export default function AddProductPage() {
+  const navigate = useNavigate();
+  const { productId } = useParams();
+  const { userToken } = useAuth();
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [variants, setVariants] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSameAsManufacturer, setIsSameAsManufacturer] = useState(false);
+  const [cityList, setCityList] = useState(CITIES["India"]);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    category: "",
+    brand: "",
+    material: "",
+    images: {},
+    pricing: { costPrice: 0, sellingPrice: 0, mrp: 0, discount: 0 },
+    inventory: { totalStock: 0 },
+    compliance: { hsnCode: "", gst: "", countryOfOrigin: "India" },
+    manufacturer: { name: "", address: "", city: "", state: "", pincode: "", phone: "", email: "", licenseNumber: "" },
+    packer: { name: "", address: "", city: "", state: "", pincode: "", phone: "" },
+    shipping: { weight: 0, shippingCharge: 0 },
+    policies: { returnDays: 30, returnPolicy: "", warranty: "", shippingPolicy: "", codAvailable: true },
+  });
+
+  const [newVariant, setNewVariant] = useState({
+    color: "", size: "", sku: "", barcode: "",
+    costPrice: 0, mrp: 0, sellingPrice: 0, stock: 0,
+    height: 0, width: 0, length: 0, weight: 0
+  });
+
+  const steps = ["Basic Info", "Images", "Variants", "Manufacturer & Policies"];
+
+  useEffect(() => {
+    if (productId) loadProduct();
+  }, [productId]);
+
+  const loadProduct = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFormData(prev => ({
+            ...prev,
+            ...data.product,
+            pricing: { ...prev.pricing, ...data.product.pricing },
+            compliance: { ...prev.compliance, ...data.product.compliance },
+            manufacturer: { ...prev.manufacturer, ...data.product.manufacturer },
+            packer: { ...prev.packer, ...data.product.packer },
+            policies: { ...prev.policies, ...data.product.policies }
+        }));
+        setVariants(data.product.variants || []);
+        if (data.product.compliance?.countryOfOrigin) {
+          setCityList(CITIES[data.product.compliance.countryOfOrigin] || []);
+        }
+      }
+    } catch (error) {
+      toast.error("Failed to load product");
+    }
+  };
+
+  const handleCountryChange = (country) => {
+    setFormData(prev => ({
+      ...prev,
+      compliance: { ...prev.compliance, countryOfOrigin: country },
+      manufacturer: { ...prev.manufacturer, city: "" }
+    }));
+    setCityList(CITIES[country] || []);
+  };
+
+  const handleSameAsManufacturer = (checked) => {
+    setIsSameAsManufacturer(checked);
+    if (checked) {
+      setFormData(prev => ({ ...prev, packer: { ...prev.manufacturer } }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        packer: { name: "", address: "", city: "", state: "", pincode: "", phone: "" }
+      }));
+    }
+  };
+
+  const handleImageUpload = (key, file) => {
+    setFormData(prev => ({ ...prev, images: { ...prev.images, [key]: file } }));
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreviews(prev => ({ ...prev, [key]: e.target.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const addVariant = () => {
+    if (newVariant.color && newVariant.size && newVariant.sellingPrice > 0 && newVariant.stock > 0) {
+      setVariants(prev => [...prev, { ...newVariant, id: Date.now() }]);
+      setNewVariant({
+        color: "", size: "", sku: "", barcode: "",
+        costPrice: 0, mrp: 0, sellingPrice: 0, stock: 0,
+        height: 0, width: 0, length: 0, weight: 0
+      });
+    } else {
+      toast.error("Please fill required variant fields (Color, Size, Price, Stock)");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Removed variant requirement - now optional
+    if (!formData.name || !formData.category) {
+      toast.error("Please fill Name and Category fields.");
+      return;
+    }
+
+    if (variants.length === 0 && (!formData.pricing.sellingPrice || formData.pricing.sellingPrice <= 0)) {
+      toast.error("If no variants, please add pricing to the base product.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const submissionData = new FormData();
+      // Basic Fields
+      submissionData.append("name", formData.name);
+      submissionData.append("description", formData.description);
+      submissionData.append("category", formData.category);
+      submissionData.append("brand", formData.brand);
+      submissionData.append("material", formData.material);
+      
+      // JSON objects
+      submissionData.append("variants", JSON.stringify(variants));
+      submissionData.append("pricing", JSON.stringify(formData.pricing));
+      submissionData.append("compliance", JSON.stringify(formData.compliance));
+      submissionData.append("manufacturer", JSON.stringify(formData.manufacturer));
+      submissionData.append("packer", JSON.stringify(formData.packer));
+      submissionData.append("shipping", JSON.stringify(formData.shipping));
+      submissionData.append("policies", JSON.stringify(formData.policies));
+
+      // Images - FIXED: Use correct field names that match router (primary, front, back, side)
+      if (formData.images.primary) submissionData.append("primary", formData.images.primary);
+      if (formData.images.frontView) submissionData.append("front", formData.images.frontView);
+      if (formData.images.backView) submissionData.append("back", formData.images.backView);
+      if (formData.images.sideView) submissionData.append("side", formData.images.sideView);
+
+      const response = await fetch(productId ? `${API_BASE_URL}/products/${productId}` : `${API_BASE_URL}/products`, {
+        method: productId ? "PUT" : "POST",
+        headers: { Authorization: `Bearer ${userToken}` },
+        body: submissionData,
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(
+  productId
+    ? "Product updated & sent for re-approval"
+    : "Product submitted for admin approval"
+);
+        navigate("/seller/inventory");
+      } else {
+        console.error("[v0] Error response:", data);
+        toast.error(data.message || "Failed to save product");
+      }
+    } catch (error) {
+      console.error("[v0] Error:", error);
+      toast.error(error.message || "Error saving product");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <h2 className="text-2xl font-bold text-gray-800">Basic Information</h2>
+            <div className="grid grid-cols-1 gap-6">
+              <input
+                type="text"
+                placeholder="Product Name *"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full border-2 border-gray-300 rounded-lg p-3.5 focus:outline-none focus:border-blue-500 transition shadow-sm"
+              />
+              <textarea
+                placeholder="Product Description *"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full border-2 border-gray-300 rounded-lg p-3.5 h-32 focus:outline-none focus:border-blue-500 transition shadow-sm"
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SmartDropdown
+                  label="Category *"
+                  value={formData.category}
+                  suggestions={["Fashion", "Electronics", "Toys", "Beauty", "Sports"]}
+                  onChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
+                  required
+                />
+                <div>
+                    <label className="block text-sm font-semibold mb-1.5 text-gray-700">Brand Name</label>
+                    <input
+                        type="text"
+                        placeholder="Brand"
+                        value={formData.brand}
+                        onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                        className="w-full border-2 border-gray-300 rounded-lg p-3 focus:outline-none focus:border-blue-500 transition shadow-sm"
+                    />
+                </div>
+              </div>
+              <SmartDropdown
+                label="Material"
+                value={formData.material}
+                suggestions={MATERIAL_SUGGESTIONS}
+                onChange={(val) => setFormData(prev => ({ ...prev, material: val }))}
+              />
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6 animate-in slide-in-from-right-5 duration-500">
+            <h2 className="text-2xl font-bold text-gray-800">Product Images</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ImageUploader label="Primary Image *" onChange={(f) => handleImageUpload("primary", f)} preview={imagePreviews.primary} />
+              <ImageUploader label="Front View" onChange={(f) => handleImageUpload("frontView", f)} preview={imagePreviews.frontView} />
+              <ImageUploader label="Back View" onChange={(f) => handleImageUpload("backView", f)} preview={imagePreviews.backView} />
+              <ImageUploader label="Side View" onChange={(f) => handleImageUpload("sideView", f)} preview={imagePreviews.sideView} />
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-8 animate-in slide-in-from-right-5 duration-500">
+            <h2 className="text-2xl font-bold text-gray-800">Variants & Pricing</h2>
+            
+            {/* VARIANT INPUT SECTION */}
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-md space-y-5">
+              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-widest">Step 1: Define New Variant</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <SmartDropdown label="Color" value={newVariant.color} suggestions={COLOR_SUGGESTIONS} onChange={(v) => setNewVariant(p => ({ ...p, color: v }))} />
+                <SmartDropdown label="Size" value={newVariant.size} suggestions={SIZE_SUGGESTIONS} onChange={(v) => setNewVariant(p => ({ ...p, size: v }))} />
+                <div className="flex flex-col">
+                    <label className="text-sm font-bold mb-1 text-gray-600">Price *</label>
+                    <input type="number" placeholder="₹ Price" value={newVariant.sellingPrice || ""} onChange={e => setNewVariant(p => ({ ...p, sellingPrice: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-2.5 focus:border-blue-400 outline-none" />
+                </div>
+                <div className="flex flex-col">
+                    <label className="text-sm font-bold mb-1 text-gray-600">Stock *</label>
+                    <input type="number" placeholder="Stock" value={newVariant.stock || ""} onChange={e => setNewVariant(p => ({ ...p, stock: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-2.5 focus:border-blue-400 outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <input type="text" placeholder="SKU" value={newVariant.sku} onChange={e => setNewVariant(p => ({ ...p, sku: e.target.value }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="text" placeholder="Barcode" value={newVariant.barcode} onChange={e => setNewVariant(p => ({ ...p, barcode: e.target.value }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="number" placeholder="Cost Price" value={newVariant.costPrice || ""} onChange={e => setNewVariant(p => ({ ...p, costPrice: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="number" placeholder="MRP" value={newVariant.mrp || ""} onChange={e => setNewVariant(p => ({ ...p, mrp: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+              </div>
+
+              <h3 className="text-sm font-bold text-gray-500 border-t pt-4">Dimensions & Shipping Weight</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <input type="number" placeholder="Height (cm)" value={newVariant.height || ""} onChange={e => setNewVariant(p => ({ ...p, height: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="number" placeholder="Width (cm)" value={newVariant.width || ""} onChange={e => setNewVariant(p => ({ ...p, width: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="number" placeholder="Length (cm)" value={newVariant.length || ""} onChange={e => setNewVariant(p => ({ ...p, length: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+                <input type="number" placeholder="Weight (kg)" value={newVariant.weight || ""} onChange={e => setNewVariant(p => ({ ...p, weight: Number(e.target.value) }))} className="border-2 border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-blue-500" />
+              </div>
+
+              <button type="button" onClick={addVariant} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100">
+                + Add This Variant to List
+              </button>
+            </div>
+
+            {/* VARIANT TABLE */}
+            {variants.length > 0 && (
+              <div className="overflow-hidden border-2 border-gray-200 rounded-2xl shadow-sm bg-white">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b-2">
+                    <tr className="text-gray-600 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="p-4 text-left">Color/Size</th>
+                      <th className="p-4 text-left">Pricing (₹)</th>
+                      <th className="p-4 text-left">Dims (cm/kg)</th>
+                      <th className="p-4 text-left">Stock</th>
+                      <th className="p-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {variants.map((v, i) => (
+                      <tr key={v.id} className="hover:bg-gray-50 transition">
+                        <td className="p-4">
+                            <span className="font-bold text-gray-800">{v.color}</span> / <span className="text-gray-500">{v.size}</span>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">{v.sku || 'No SKU'}</div>
+                        </td>
+                        <td className="p-4">
+                            <div className="font-bold text-blue-600">Sell: ₹{v.sellingPrice}</div>
+                            <div className="text-[10px] text-gray-400 line-through">MRP: ₹{v.mrp}</div>
+                        </td>
+                        <td className="p-4 text-gray-500">
+                            {v.height}x{v.width}x{v.length} <br/>
+                            <span className="text-[11px] font-bold">{v.weight} kg</span>
+                        </td>
+                        <td className="p-4 font-bold text-gray-700">{v.stock} pcs</td>
+                        <td className="p-4 text-center">
+                          <button type="button" onClick={() => setVariants(prev => prev.filter((item) => item.id !== v.id))} className="text-red-500 hover:bg-red-50 p-2 rounded-full transition">🗑️</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* GLOBAL COMPLIANCE */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-6 bg-gray-50 rounded-2xl border-2 border-gray-200">
+               <div>
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">GST %</label>
+                  <input type="number" placeholder="5" value={formData.compliance.gst} onChange={e => setFormData(p => ({ ...p, compliance: { ...p.compliance, gst: Number(e.target.value) } }))} className="w-full border-2 border-gray-300 rounded-lg p-3 outline-none focus:border-blue-500" />
+               </div>
+               <div>
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">HSN Code</label>
+                  <input type="text" placeholder="6206" value={formData.compliance.hsnCode} onChange={e => setFormData(p => ({ ...p, compliance: { ...p.compliance, hsnCode: e.target.value } }))} className="w-full border-2 border-gray-300 rounded-lg p-3 outline-none focus:border-blue-500" />
+               </div>
+               <div>
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Global Discount %</label>
+                  <input type="number" placeholder="10" value={formData.pricing.discount} onChange={e => setFormData(p => ({ ...p, pricing: { ...p.pricing, discount: Number(e.target.value) } }))} className="w-full border-2 border-gray-300 rounded-lg p-3 outline-none focus:border-blue-500" />
+               </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-8 animate-in slide-in-from-right-5 duration-500">
+            <h2 className="text-2xl font-bold text-gray-800">Legal & Policies</h2>
+            
+            <div className="bg-orange-50 p-5 rounded-2xl border-2 border-orange-100 flex items-center gap-3">
+              <input type="checkbox" id="sameAsM" checked={isSameAsManufacturer} onChange={e => handleSameAsManufacturer(e.target.checked)} className="w-5 h-5 accent-orange-600" />
+              <label htmlFor="sameAsM" className="text-sm font-bold text-orange-800 cursor-pointer">Packer details same as Manufacturer (Auto-fill)</label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 p-6 bg-white border-2 border-gray-200 rounded-2xl">
+                <h3 className="font-bold text-gray-700 uppercase text-xs tracking-widest border-b pb-2">Manufacturer Info</h3>
+                <input type="text" placeholder="Company Name" value={formData.manufacturer.name} onChange={e => setFormData(p => ({ ...p, manufacturer: { ...p.manufacturer, name: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-lg p-3 shadow-sm" />
+                <SmartDropdown label="Country" value={formData.compliance.countryOfOrigin} suggestions={COUNTRIES} onChange={handleCountryChange} />
+                <SmartDropdown label="City" value={formData.manufacturer.city} suggestions={cityList} onChange={v => setFormData(p => ({ ...p, manufacturer: { ...p.manufacturer, city: v } }))} />
+                <input type="text" placeholder="Full Office Address" value={formData.manufacturer.address} onChange={e => setFormData(p => ({ ...p, manufacturer: { ...p.manufacturer, address: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-lg p-3 shadow-sm" />
+              </div>
+
+              <div className={`space-y-4 p-6 bg-white border-2 border-gray-200 rounded-2xl transition ${isSameAsManufacturer ? 'opacity-50 pointer-events-none grayscale bg-gray-50' : ''}`}>
+                <h3 className="font-bold text-gray-700 uppercase text-xs tracking-widest border-b pb-2">Packer Info</h3>
+                <input type="text" placeholder="Packer Company Name" value={formData.packer.name} onChange={e => setFormData(p => ({ ...p, packer: { ...p.packer, name: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-lg p-3 shadow-sm" />
+                <input type="text" placeholder="Address" value={formData.packer.address} onChange={e => setFormData(p => ({ ...p, packer: { ...p.packer, address: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-lg p-3 shadow-sm" />
+                <input type="text" placeholder="Pincode" value={formData.packer.pincode} onChange={e => setFormData(p => ({ ...p, packer: { ...p.packer, pincode: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-lg p-3 shadow-sm" />
+              </div>
+            </div>
+
+            <div className="bg-gray-100 p-8 rounded-3xl space-y-6">
+              <h3 className="font-bold text-gray-800">Shipping & Return Policies</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <textarea placeholder="Return Policy (e.g. 7 days exchange only)" value={formData.policies.returnPolicy} onChange={e => setFormData(p => ({ ...p, policies: { ...p.policies, returnPolicy: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-xl p-4 h-28 text-sm focus:border-blue-500" />
+                <textarea placeholder="Warranty (e.g. 6 Months brand warranty)" value={formData.policies.warranty} onChange={e => setFormData(p => ({ ...p, policies: { ...p.policies, warranty: e.target.value } }))} className="w-full border-2 border-gray-200 rounded-xl p-4 h-28 text-sm focus:border-blue-500" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={formData.policies.codAvailable} onChange={e => setFormData(p => ({ ...p, policies: { ...p.policies, codAvailable: e.target.checked } }))} className="w-5 h-5 accent-blue-600" />
+                <span className="font-bold text-gray-700 text-sm">Enable Cash on Delivery (COD)</span>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFDFD] py-10 px-4 md:px-12">
+      <div className="max-w-4xl mx-auto">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-8 border-b pb-6">
+          <button onClick={() => navigate("/seller/products")} className="flex items-center text-sm font-black text-gray-400 hover:text-blue-600 transition group">
+            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> PRODUCT LIST
+          </button>
+          <div className="text-right">
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">{productId ? "EDIT PRODUCT" : "NEW PRODUCT"}</h1>
+            <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Status: Step {currentStep} of {steps.length}</p>
+          </div>
+        </div>
+
+        {/* PROGRESS BAR */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border-2 border-gray-50 mb-10">
+          <div className="flex gap-2">
+            {steps.map((_, i) => (
+              <div key={i} className={`h-2 flex-1 rounded-full transition-all duration-700 ${i + 1 <= currentStep ? "bg-blue-600 shadow-md shadow-blue-100" : "bg-gray-100"}`} />
+            ))}
+          </div>
+          <div className="flex justify-between mt-4">
+             {steps.map((s, i) => (
+               <span key={i} className={`text-[10px] font-black uppercase tracking-tighter ${i + 1 === currentStep ? "text-blue-600" : "text-gray-300"}`}>{s}</span>
+             ))}
+          </div>
+        </div>
+
+        {/* FORM BOX */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-[40px] shadow-2xl shadow-blue-900/5 border border-gray-100 p-8 md:p-12">
+          {renderStep()}
+
+          {/* NAVIGATION */}
+          <div className="flex items-center justify-between mt-12 pt-10 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(p => p - 1)}
+              disabled={currentStep === 1}
+              className="px-8 py-3.5 rounded-2xl border-2 border-gray-100 text-sm font-bold text-gray-400 hover:bg-gray-50 disabled:opacity-30 transition"
+            >
+              Previous
+            </button>
+
+            {currentStep === steps.length ? (
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-12 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition shadow-xl shadow-blue-200 disabled:opacity-50"
+              >
+                {isLoading ? "PUBLISHING..." : "FINISH & PUBLISH"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(p => p + 1)}
+                className="px-12 py-3.5 bg-gray-900 text-white rounded-2xl font-black text-sm hover:bg-black transition shadow-xl shadow-gray-200"
+              >
+                SAVE & NEXT
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

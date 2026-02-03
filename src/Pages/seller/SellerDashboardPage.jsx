@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Package,
@@ -41,13 +41,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { useAuth } from "@/context/AuthContext";
+import { AuthContext } from "@/context/AuthContext";
+import { api } from "../../lib/api"; 
 import { toast } from "react-toastify";
 import DashboardGraphs from "../../Pages/seller/DashboardGraphs";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api";
-const UPLOAD_BASE_URL = API_BASE_URL.replace("/api", "");
+const UPLOAD_BASE_URL = "https://expertz-digishop.onrender.com";
 
 const formatPrice = (price) => {
   const val = Number(price) || 0;
@@ -58,20 +59,42 @@ const formatPrice = (price) => {
   }).format(val);
 };
 
+const getProductPrice = (product) => {
+  if (product?.variants && product.variants.length > 0) {
+    return product.variants[0].sellingPrice ?? product.variants[0].pricing?.sellingPrice ?? 0;
+  }
+  return product?.pricing?.sellingPrice ?? product?.price ?? 0;
+};
+
+const getProductStock = (product) => {
+  if (product?.variants && product.variants.length > 0) {
+    return product.variants[0].stock ?? product.variants[0].inventory?.quantity ?? 0;
+  }
+  return product?.inventory?.totalStock ?? product?.stock ?? 0;
+};
+
+const getProductImage = (product) => {
+  let imagePath =
+    product?.images?.primary ||
+    product?.images?.frontView ||
+    product?.variants?.[0]?.image ||
+    product?.variants?.[0]?.images?.[0] ||
+    null;
+
+  if (!imagePath) return "/placeholder.svg";
+
+  imagePath = String(imagePath);
+
+  if (imagePath.startsWith("http")) return imagePath;
+
+  const cleanPath = imagePath.replace(/\\/g, "/").replace(/^\/+/, "");
+  return `${UPLOAD_BASE_URL}/${cleanPath}`;
+};
+
 const generateChartData = (monthlyRevenue) => {
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   const data = [];
   const now = new Date();
@@ -83,7 +106,7 @@ const generateChartData = (monthlyRevenue) => {
 
     data.push({
       month,
-      revenue: Math.round((monthlyRevenue[key] || 0) / 1000),
+      revenue: Math.round((monthlyRevenue?.[key] || 0) / 1000),
       orders: Math.floor(Math.random() * 50) + 5,
     });
   }
@@ -114,10 +137,6 @@ const exportToCSV = (data, filename, headers) => {
   window.URL.revokeObjectURL(url);
 };
 
-// ------------------------------------------------------
-// SELLER DASHBOARD PAGE (UI PREMIUM UPGRADE VERSION)
-// ------------------------------------------------------
-
 export default function SellerDashboardPage() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -143,11 +162,8 @@ export default function SellerDashboardPage() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const navigate = useNavigate();
-  const { userToken } = useAuth();
+  const { userToken } = useContext(AuthContext);
 
-  // -------------------------
-  // Handlers
-  // -------------------------
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
   const handleFilterChange = (status) => setFilterStatus(status);
@@ -206,9 +222,6 @@ export default function SellerDashboardPage() {
     toast.success("Dashboard report exported successfully");
   }, [stats]);
 
-  // ------------------------------------------------------
-  // FETCH DASHBOARD DATA
-  // ------------------------------------------------------
   useEffect(() => {
     const fetchSellerData = async () => {
       if (!userToken) {
@@ -217,44 +230,33 @@ export default function SellerDashboardPage() {
       }
 
       try {
+        // 🟢 FIX: Ab purana fetch use nahi hoga, naye api.get logic se call hogi jo api.js mein hai
         const [dashboardRes, productsRes, ordersRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/sellers/dashboard`, {
-            headers: { Authorization: `Bearer ${userToken}` },
-          }),
-          fetch(`${API_BASE_URL}/sellers/products`, {
-            headers: { Authorization: `Bearer ${userToken}` },
-          }),
-          fetch(`${API_BASE_URL}/sellers/orders`, {
-            headers: { Authorization: `Bearer ${userToken}` },
-          }),
+          api.get("/orders/seller/orders/dashboard"),
+          api.get("/sellers/products"),
+          api.get("/orders/seller/orders/dashboard")
         ]);
 
-        if (dashboardRes.ok) {
-          const dashboardData = await dashboardRes.json();
-          setStats(dashboardData.dashboard);
-
-          if (dashboardData.dashboard?.monthlyRevenue) {
-            setChartData(
-              generateChartData(dashboardData.dashboard.monthlyRevenue)
-            );
+        if (dashboardRes && dashboardRes.success) {
+          setStats(dashboardRes.stats || dashboardRes.dashboard || stats);
+          if (dashboardRes.dashboard?.monthlyRevenue) {
+            setChartData(generateChartData(dashboardRes.dashboard.monthlyRevenue));
           }
         }
 
-        if (productsRes.ok) {
-          const productsData = await productsRes.json();
-          const allProducts = productsData.products || [];
-
+        if (productsRes && productsRes.success) {
+          const allProducts = productsRes.products || [];
           setProducts(allProducts);
           setLowStockProducts(
-            allProducts.filter((p) => p.stock < 10).slice(0, 5)
+            allProducts.filter((p) => getProductStock(p) < 10).slice(0, 5)
           );
         }
 
-        if (ordersRes.ok) {
-          const ordersData = await ordersRes.json();
-          setOrders(ordersData.orders || []);
+        if (ordersRes && ordersRes.success) {
+          setOrders(ordersRes.orders || []);
         }
       } catch (error) {
+        console.error("Dashboard Fetch Error:", error);
         toast.error("Failed to load seller data");
       } finally {
         setIsLoading(false);
@@ -264,15 +266,12 @@ export default function SellerDashboardPage() {
     fetchSellerData();
   }, [userToken, navigate]);
 
-  // ------------------------------------------------------
-  // FILTER PRODUCTS
-  // ------------------------------------------------------
   useEffect(() => {
     let filtered = [...products];
 
     if (searchTerm.trim()) {
       filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -284,22 +283,6 @@ export default function SellerDashboardPage() {
 
     setFilteredProducts(filtered);
   }, [searchTerm, filterStatus, products]);
-
-  // ------------------------------------------------------
-  // IMAGE HANDLER
-  // ------------------------------------------------------
-const getProductImage = (product) => {
-  if (product.images?.length > 0) {
-    const imagePath = product.images[0];
-    if (imagePath.startsWith("http")) return imagePath;
-
-    return `${UPLOAD_BASE_URL}${
-      imagePath.startsWith("/") ? "" : "/"
-    }${imagePath.replace(/\\/g, "/")}`;
-  }
-  return "/placeholder.svg";
-};
-
 
   const getStatusColor = (status) => {
     const colors = {
@@ -316,9 +299,6 @@ const getProductImage = (product) => {
     return colors[status] || "bg-gray-100 text-gray-800 border-gray-300";
   };
 
-  // ------------------------------------------------------
-  // LOADING SCREEN
-  // ------------------------------------------------------
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -334,13 +314,9 @@ const getProductImage = (product) => {
     <DashboardGraphs userToken={userToken} apiBaseUrl={API_BASE_URL} />
   );
 
-  // ------------------------------------------------------
-  // MAIN RETURN UI (PREMIUM)
-  // ------------------------------------------------------
   return (
     <div className="min-h-screen bg-gray-100 pb-12">
       <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14">
-        {/* ----------------------- HEADER ----------------------- */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 pb-6 border-b border-gray-300 gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
@@ -352,12 +328,11 @@ const getProductImage = (product) => {
           </div>
 
          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
-            {/* Export Button - Outline Style with Soft Gray */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                 className="flex-1 sm:w-auto flex items-center justify-center gap-2 h-11 px-4 sm:px-6 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 shadow-sm"
+                   className="flex-1 sm:w-auto flex items-center justify-center gap-2 h-11 px-4 sm:px-6 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 shadow-sm"
                 >
                   <Download className="h-[18px] w-[18px] stroke-[1.5]" />
                   <span className="ffont-medium text-xs sm:text-sm">
@@ -389,7 +364,6 @@ const getProductImage = (product) => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Add Product Button - Gradient & Shadow Style */}
             <Link to="/seller/add-product" className="flex-1 sm:w-auto">
               <Button className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium px-4 sm:px-8 h-11 rounded-full flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform border-none">
                 <Plus className="h-4 w-4" />
@@ -399,9 +373,7 @@ const getProductImage = (product) => {
           </div>
         </div>
 
-        {/* ------------------- KEY METRICS CARDS ------------------- */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-10">
-          {/* Total Products */}
           <Card
             onClick={handleGoToInventory}
             className="cursor-pointer transition-all hover:shadow-xl border-l-4 border-blue-600 shadow-md rounded-xl"
@@ -423,7 +395,6 @@ const getProductImage = (product) => {
             </CardContent>
           </Card>
 
-          {/* Total Orders */}
           <Card
             onClick={handleGoToOrders}
             className="cursor-pointer transition-all hover:shadow-xl border-l-4 border-purple-600 shadow-md rounded-xl"
@@ -445,7 +416,6 @@ const getProductImage = (product) => {
             </CardContent>
           </Card>
 
-          {/* Revenue */}
           <Card
             onClick={handleGoToRevenue}
             className="cursor-pointer transition-all hover:shadow-xl border-l-4 border-emerald-600 shadow-md rounded-xl"
@@ -467,7 +437,6 @@ const getProductImage = (product) => {
             </CardContent>
           </Card>
 
-          {/* Rating */}
           <Card
             onClick={handleGoToRating}
             className="cursor-pointer transition-all hover:shadow-xl border-l-4 border-yellow-600 shadow-md rounded-xl"
@@ -488,7 +457,6 @@ const getProductImage = (product) => {
             </CardContent>
           </Card>
 
-          {/* Customers */}
           <Card
             onClick={handleGoToCustomers}
             className="cursor-pointer transition-all hover:shadow-xl border-l-4 border-cyan-600 shadow-md rounded-xl"
@@ -509,9 +477,7 @@ const getProductImage = (product) => {
           </Card>
         </div>
 
-        {/* ------------------- GRAPHS + LOW STOCK SECTION ------------------- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Revenue Graphs */}
           <Card className="lg:col-span-2 shadow-xl rounded-xl">
             <CardHeader className="border-b pb-4">
               <CardTitle className="text-xl font-bold text-gray-800">
@@ -522,7 +488,6 @@ const getProductImage = (product) => {
             <CardContent className="p-6">{dashboardGraphsSection}</CardContent>
           </Card>
 
-          {/* Low Stock */}
           <Card className="shadow-lg border-none rounded-2xl overflow-hidden bg-white">
             <CardHeader className="border-b border-slate-50 pb-4 pt-6 px-6">
               <CardTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
@@ -549,13 +514,11 @@ const getProductImage = (product) => {
                         <p className="text-sm font-bold text-gray-800 truncate">
                           {product.name}
                         </p>
-                        {/* Boxy Badge ko Pill Badge banaya */}
                         <Badge className="mt-1 bg-red-600 hover:bg-red-700 text-white border-none rounded-full px-3 py-0.5 text-[10px] font-bold">
-                          Only {product.stock} left
+                          Only {getProductStock(product)} left
                         </Badge>
                       </div>
 
-                      {/* Edit Button ko Rounded/Pill shape kiya */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -567,7 +530,6 @@ const getProductImage = (product) => {
                     </div>
                   ))}
 
-                  {/* Main Button ko Pill Shape aur Shadow di */}
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold mt-4 rounded-full h-11 shadow-lg shadow-blue-100 transition-all active:scale-[0.98]"
                     onClick={handleGoToInventory}
@@ -586,7 +548,6 @@ const getProductImage = (product) => {
           </Card>
         </div>
 
-        {/* ------------------- TABS ------------------- */}
         <Tabs defaultValue="products" className="space-y-8">
           <TabsList className="inline-flex h-auto p-1.5 bg-slate-100/50 backdrop-blur-md rounded-full border border-slate-200 shadow-inner gap-1">
             <TabsTrigger
@@ -630,7 +591,6 @@ const getProductImage = (product) => {
             </TabsTrigger>
           </TabsList>
 
-          {/* ------------------- PRODUCTS TAB ------------------- */}
           <TabsContent value="products" className="space-y-6">
             <Card className="shadow-xl rounded-xl">
               <CardHeader className="border-b pb-5">
@@ -640,7 +600,6 @@ const getProductImage = (product) => {
                   </CardTitle>
 
                   <div className="flex flex-wrap gap-3">
-                    {/* Search */}
                     <div className="relative w-full sm:w-64">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input
@@ -651,7 +610,6 @@ const getProductImage = (product) => {
                       />
                     </div>
 
-                    {/* Filter */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -732,19 +690,19 @@ const getProductImage = (product) => {
                             key={product._id}
                             className="hover:bg-gray-50 transition-all p-2"
                           >
-                            {/* Product Image + Name */}
                             <TableCell>
                               <div className="flex items-center gap-4">
                                 <img
                                   src={getProductImage(product)}
                                   className="h-14 w-14 rounded object-cover border"
+                                  onError={(e) => { e.target.src = "/placeholder.svg" }}
                                 />
                                 <div>
                                   <p className="font-semibold text-gray-900">
                                     {product.name}
                                   </p>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    SKU: {product.sku}
+                                    SKU: {product.variants?.[0]?.sku || product.compliance?.sku || 'N/A'}
                                   </p>
                                 </div>
                               </div>
@@ -755,18 +713,18 @@ const getProductImage = (product) => {
                             </TableCell>
 
                             <TableCell className="text-gray-900 font-semibold">
-                              {formatPrice(product.price)}
+                              {formatPrice(getProductPrice(product))}
                             </TableCell>
 
                             <TableCell className="text-center">
                               <span
                                 className={`font-semibold ${
-                                  product.stock < 10
+                                  getProductStock(product) < 10
                                     ? "text-red-600"
                                     : "text-green-600"
                                 }`}
                               >
-                                {product.stock}
+                                {getProductStock(product)}
                               </span>
                             </TableCell>
 
@@ -788,7 +746,7 @@ const getProductImage = (product) => {
                                     size="icon"
                                     className="h-9 w-9 hover:bg-gray-100"
                                   >
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    < MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
 
@@ -823,7 +781,6 @@ const getProductImage = (product) => {
             </Card>
           </TabsContent>
 
-          {/* ------------------- ORDERS TAB ------------------- */}
           <TabsContent value="orders" className="space-y-6">
             <Card className="shadow-xl rounded-xl">
               <CardHeader className="border-b pb-5">
@@ -893,10 +850,10 @@ const getProductImage = (product) => {
                             <TableCell>
                               <div className="text-sm">
                                 <p className="font-semibold text-gray-900">
-                                  {order.user?.name || "Guest"}
+                                  {order.customer?.name || "Guest"}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {order.user?.email}
+                                  {order.customer?.email}
                                 </p>
                               </div>
                             </TableCell>
@@ -937,10 +894,9 @@ const getProductImage = (product) => {
             </Card>
           </TabsContent>
 
-          {/* ------------------- ANALYTICS TAB ------------------- */}
           <TabsContent value="analytics" className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="lg:col-span-2 shadow-xl rounded-xl">
+              < Card className="lg:col-span-2 shadow-xl rounded-xl">
                 <CardHeader className="pb-4 border-b">
                   <CardTitle className="text-xl font-bold text-gray-900">
                     Key Metrics Summary
@@ -948,7 +904,6 @@ const getProductImage = (product) => {
                 </CardHeader>
 
                 <CardContent className="p-6 space-y-8">
-                  {/* Performance Cards */}
                   <div className="grid grid-cols-2 gap-6 border-b pb-6">
                     <div>
                       <p className="text-gray-600 text-sm mb-1">
@@ -974,7 +929,6 @@ const getProductImage = (product) => {
                     </div>
                   </div>
 
-                  {/* Product Health */}
                   <div className="pt-6">
                     <p className="text-lg font-semibold text-gray-800 mb-4">
                       Product Health

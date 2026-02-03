@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Heart, Star, ShoppingCart, TrendingDown, Zap } from "lucide-react"
@@ -14,14 +12,10 @@ const IMAGE_BASE = import.meta.env.VITE_API_URL
 
 const getImageUrl = (img) => {
   if (!img) return "/placeholder.svg"
-
   const clean = img.replace(/\\/g, "/")
-
   if (clean.startsWith("http")) return clean
-
   const base = IMAGE_BASE.endsWith("/") ? IMAGE_BASE.slice(0, -1) : IMAGE_BASE
   const path = clean.startsWith("/") ? clean : `/${clean}`
-
   return `${base}${path}`
 }
 
@@ -32,8 +26,30 @@ const formatPrice = (value) =>
     maximumFractionDigits: 0,
   }).format(value)
 
+// --- LOGIC ADDED: NORMALIZATION FUNCTION ---
+const normalizeProduct = (p) => {
+  if (!p) return null;
+  const hasVariants = p.variants && p.variants.length > 0;
+
+  // Convert images object/array to simple array
+  const imagesArray = p.images && typeof p.images === "object"
+    ? Object.values(p.images).filter(Boolean)
+    : Array.isArray(p.images) ? p.images : [];
+
+  return {
+    ...p,
+    brand: p.brand || "Digishop",
+    price: hasVariants ? p.variants[0]?.sellingPrice : (p.pricing?.sellingPrice || p.price || 0),
+    originalPrice: hasVariants ? p.variants[0]?.mrp : (p.pricing?.mrp || p.originalPrice || 0),
+    stock: hasVariants 
+      ? p.variants.reduce((s, v) => s + (v.stock || 0), 0) 
+      : (p.inventory?.totalStock || p.stock || 0),
+    images: imagesArray
+  };
+};
+
 export default function ProductCard({
-  product,
+  product: rawProduct,
   isWishlisted: externalWishlisted,
   onWishlistToggle,
 }) {
@@ -42,21 +58,21 @@ export default function ProductCard({
   const { userToken } = useAuth()
   const { addToWishlist, removeFromWishlist, fetchWishlist } = useWishlist()
 
+  // --- LOGIC ADDED: APPLY NORMALIZATION ---
+  const product = normalizeProduct(rawProduct);
   const [localWish, setLocalWish] = useState(false)
 
-  const isWishlisted =
-    externalWishlisted !== undefined ? externalWishlisted : localWish
+  if (!product) return null;
+
+  const isWishlisted = externalWishlisted !== undefined ? externalWishlisted : localWish
   const isOut = product.stock === 0
 
-  const img = getImageUrl(product?.images?.[0])
+  // Updated image logic to use the first image from normalized array
+  const img = getImageUrl(product.images?.[0])
 
   const discountPercent =
     product.originalPrice && product.originalPrice > product.price
-      ? Math.floor(
-          ((product.originalPrice - product.price) /
-            product.originalPrice) *
-            100
-        )
+      ? Math.floor(((product.originalPrice - product.price) / product.originalPrice) * 100)
       : 0
 
   const handleAddToCart = (e) => {
@@ -169,7 +185,7 @@ export default function ProductCard({
 
       <div className="p-3 sm:p-4 flex flex-col flex-1">
         <p className="text-[10px] text-[#E75480] uppercase font-black tracking-widest italic mb-1">
-          {product.brand || "Digishop"}
+          {product.brand}
         </p>
 
         <Link to={`/product/${product._id}`}>
@@ -192,7 +208,7 @@ export default function ProductCard({
             ))}
           </div>
           <span className="text-[10px] text-gray-400 ml-1 font-bold">
-            ({product.reviewCount || product.reviews?.length || 0})
+            ({product.reviewCount || 0})
           </span>
         </div>
 

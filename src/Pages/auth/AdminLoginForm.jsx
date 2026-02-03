@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Cookies from "js-cookie"
 import { useNavigate, Link } from "react-router-dom"
 import { Eye, EyeOff, Mail, Lock, Shield, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/context/AuthContext"
 import { toast } from "react-toastify"
 
-// Backend URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api"
 
 function AdminLoginForm() {
@@ -23,21 +23,17 @@ function AdminLoginForm() {
   const navigate = useNavigate()
   const { login, userRole } = useAuth()
 
-  // Redirect if already admin
-  if (userRole === "admin") {
-    navigate("/admin/dashboard")
-    return null
-  }
+  useEffect(() => {
+    if (userRole === "admin") {
+      navigate("/admin/dashboard", { replace: true })
+    }
+  }, [userRole, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      /**
-       * FIX: Path changed to /auth/admin/login 
-       * This bypasses the Firebase middleware on the backend.
-       */
       const response = await fetch(`${API_BASE_URL}/auth/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,7 +51,6 @@ function AdminLoginForm() {
         return
       }
 
-      // Verify role from response
       const role = String(data.user.role).toLowerCase()
       if (role !== "admin") {
         toast.error("Access denied. Admin credentials required.")
@@ -63,7 +58,9 @@ function AdminLoginForm() {
         return
       }
 
-      // Context Login
+      Cookies.set("userToken", data.token, { expires: 1, secure: true, sameSite: 'strict' })
+      Cookies.set("userRole", "admin", { expires: 1, secure: true, sameSite: 'strict' })
+
       login(
         data.token,
         role,
@@ -93,17 +90,18 @@ function AdminLoginForm() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  if (userRole === "admin") {
+    return null
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-4 py-10 relative overflow-hidden">
-      {/* Background Pattern - UI Unchanged */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
       </div>
 
-      {/* Main Card */}
       <div className="relative z-10 w-full max-w-md">
-        {/* Admin Badge */}
         <div className="flex justify-center mb-6">
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
             <Shield className="h-5 w-5 text-blue-300" />
@@ -112,14 +110,12 @@ function AdminLoginForm() {
         </div>
 
         <Card className="backdrop-blur-xl bg-white/95 shadow-2xl border border-white/20 rounded-2xl overflow-hidden">
-          {/* Header with Gradient */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 text-center">
             <CardTitle className="text-3xl font-bold text-white mb-2">Admin Login</CardTitle>
             <CardDescription className="text-blue-100">Restricted access - authorized personnel only</CardDescription>
           </div>
 
           <CardContent className="space-y-6 pt-8">
-            {/* Security Alert */}
             <Alert className="bg-amber-50 border border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-sm text-amber-800 ml-2">
@@ -127,9 +123,7 @@ function AdminLoginForm() {
               </AlertDescription>
             </Alert>
 
-            {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email */}
               <div>
                 <Label className="text-gray-700 font-semibold">Admin Email</Label>
                 <div className="relative mt-2">
@@ -145,7 +139,6 @@ function AdminLoginForm() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <Label className="text-gray-700 font-semibold">Password</Label>
@@ -182,9 +175,9 @@ function AdminLoginForm() {
                 </div>
               </div>
 
-              {/* Login Button */}
               <Button
                 disabled={isLoading}
+                type="submit"
                 className="w-full h-12 text-base font-semibold rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {isLoading ? (
@@ -209,7 +202,6 @@ function AdminLoginForm() {
           </CardFooter>
         </Card>
 
-        {/* Footer Info */}
         <div className="mt-8 text-center text-sm text-blue-100/60 font-medium">
           <p>DigiShop Admin Panel v1.0</p>
           <p className="mt-1">© 2026 All rights reserved</p>

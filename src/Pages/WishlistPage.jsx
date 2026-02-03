@@ -36,7 +36,7 @@ export default function WishlistPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#FFF5F7]">
         <Loader2 className="h-10 w-10 text-[#FF4E50] animate-spin" />
-        <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-[#E75480]">Syncing Archive...</p>
+        <p className="mt-4 text-[10px] font-black uppercase tracking-[0.3em] text-[#E75480]">Syncing...</p>
       </div>
     )
   }

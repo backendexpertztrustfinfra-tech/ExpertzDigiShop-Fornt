@@ -1,8 +1,9 @@
-import { Navigate } from "react-router-dom"
+import { Navigate, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 
 export const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { isAuthenticated, userRole, isLoading, sellerVerificationStatus } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
@@ -13,7 +14,9 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    const isAdminPath = location.pathname.startsWith('/admin')
+    const redirectPath = isAdminPath ? "/admin/login" : "/login"
+    return <Navigate to={redirectPath} replace state={{ from: location }} />
   }
 
   if (requiredRole) {
@@ -21,14 +24,11 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
     const normalizedRequiredRole = String(requiredRole).toLowerCase()
 
     if (normalizedUserRole !== normalizedRequiredRole) {
-      console.log("Access denied. Required role:", normalizedRequiredRole, "User role:", normalizedUserRole)
       return <Navigate to="/" replace />
     }
 
     if (normalizedRequiredRole === "seller" && sellerVerificationStatus === "pending") {
-      const currentPath = window.location.pathname
-      // Allow access to verification page itself
-      if (!currentPath.includes("/seller/verify")) {
+      if (!location.pathname.includes("/seller/verify")) {
         return <Navigate to="/seller/verify" replace />
       }
     }

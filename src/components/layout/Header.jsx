@@ -12,6 +12,8 @@ import {
   ArrowRight,
   PackageCheck,
   UserCircle,
+  ShieldCheck,
+  LifeBuoy,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -38,9 +40,6 @@ import { useCart } from "../../hooks/useCart"
 import { useAuth } from "@/context/AuthContext"
 import NotificationBell from "@/components/notifications/NotificationBell"
 
-/* --------------------------
-    MEGA MENU DATA (UNCHANGED)
---------------------------- */
 const megaMenuData = {
   makeup: {
     title: "Makeup",
@@ -131,7 +130,8 @@ export default function Header() {
 
   const normalizedRole = userRole ? String(userRole).toLowerCase() : null
   const isSeller = normalizedRole === "seller"
-  const isCustomer = isAuthenticated && normalizedRole === "customer"
+  const isAdmin = normalizedRole === "admin"
+  const isCustomer = isAuthenticated && (normalizedRole === "customer" || !normalizedRole)
 
   return (
     <>
@@ -142,7 +142,6 @@ export default function Header() {
         <div className="max-w-[1440px] mx-auto px-4 md:px-8">
           <div className="flex items-center justify-between h-16 md:h-20 gap-4">
             
-            {/* Left Section */}
             <div className="flex items-center gap-2 md:gap-6">
               <Sheet>
                 <SheetTrigger asChild>
@@ -151,13 +150,11 @@ export default function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[310px] p-0 flex flex-col bg-white border-none shadow-2xl">
-                  {/* Fixed Accessibility Warnings */}
                   <SheetHeader className="sr-only">
                     <SheetTitle>Navigation Menu</SheetTitle>
                     <SheetDescription>Browse categories and manage account</SheetDescription>
                   </SheetHeader>
 
-                  {/* Sidebar Header Area */}
                   <div className="p-6 border-b bg-gradient-to-br from-[#FFF5F7] to-white">
                     <div className="flex items-center gap-4 mb-2">
                         <img src="/logo.jpeg" className="h-12 w-12 rounded-2xl object-cover border-2 border-white shadow-md" />
@@ -169,47 +166,58 @@ export default function Header() {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {/* ACCOUNT SECTION (Top of sidebar for phone) */}
                     <div className="px-4 py-4 space-y-1">
-                       <p className="px-4 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Account Registry</p>
-                       {isAuthenticated ? (
-                         <div className="grid grid-cols-1 gap-1">
-                           <SheetClose asChild>
-                             <button onClick={() => navigate(isSeller ? "/seller/dashboard" : "/profile")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
+                        <p className="px-4 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Account Registry</p>
+                        {isAuthenticated ? (
+                          <div className="grid grid-cols-1 gap-1">
+                            <SheetClose asChild>
+                              <button 
+                                onClick={() => {
+                                    if (isAdmin) navigate("/admin/dashboard")
+                                    else if (isSeller) navigate("/seller/dashboard")
+                                    else navigate("/profile")
+                                }} 
+                                className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all"
+                              >
                                 <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm">
-                                  {isSeller ? <Store size={20} className="text-[#FF4E50]"/> : <UserCircle size={20} className="text-[#FF4E50]"/>}
+                                  {isAdmin ? <ShieldCheck size={20} className="text-[#FF4E50]"/> : isSeller ? <Store size={20} className="text-[#FF4E50]"/> : <UserCircle size={20} className="text-[#FF4E50]"/>}
                                 </div>
-                                {isSeller ? "Seller Dashboard" : "My Profile"}
-                             </button>
-                           </SheetClose>
-                           {isCustomer && (
-                             <>
-                               <SheetClose asChild>
-                                 <button onClick={() => navigate("/profile/orders")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
-                                    <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"><PackageCheck size={20} className="text-[#FF4E50]"/></div>
-                                    My Orders
-                                 </button>
-                               </SheetClose>
-                               <SheetClose asChild>
-                                 <button onClick={() => navigate("/wishlist")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
-                                    <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"><Heart size={20} className="text-[#FF4E50]"/></div>
-                                    Wishlist
-                                 </button>
-                               </SheetClose>
-                             </>
-                           )}
-                         </div>
-                       ) : (
-                         <div className="grid grid-cols-2 gap-3 px-2 mt-2">
-                            <SheetClose asChild><Button onClick={() => navigate("/login")} className="bg-[#FF4E50] text-[10px] font-black uppercase h-11 rounded-xl">Login</Button></SheetClose>
-                            <SheetClose asChild><Button onClick={() => navigate("/register")} variant="outline" className="text-[10px] font-black uppercase h-11 rounded-xl border-[#FAD0C4] text-[#E75480]">Create Account</Button></SheetClose>
-                         </div>
-                       )}
+                                {isAdmin ? "Admin Dashboard" : isSeller ? "Seller Dashboard" : "My Profile"}
+                              </button>
+                            </SheetClose>
+                            {isCustomer && (
+                              <>
+                                <SheetClose asChild>
+                                  <button onClick={() => navigate("/profile/orders")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
+                                     <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"><PackageCheck size={20} className="text-[#FF4E50]"/></div>
+                                     My Orders
+                                  </button>
+                                </SheetClose>
+                                <SheetClose asChild>
+                                  <button onClick={() => navigate("/profile/support")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
+                                     <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"><LifeBuoy size={20} className="text-[#FFB800]"/></div>
+                                     Help Center
+                                  </button>
+                                </SheetClose>
+                                <SheetClose asChild>
+                                  <button onClick={() => navigate("/wishlist")} className="flex items-center gap-4 w-full p-3 rounded-2xl text-sm font-bold text-zinc-700 hover:bg-[#FFF5F7] transition-all">
+                                     <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center border border-zinc-100 shadow-sm"><Heart size={20} className="text-[#FF4E50]"/></div>
+                                     Wishlist
+                                  </button>
+                                </SheetClose>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 px-2 mt-2">
+                             <SheetClose asChild><Button onClick={() => navigate("/login")} className="bg-[#FF4E50] text-[10px] font-black uppercase h-11 rounded-xl">Login</Button></SheetClose>
+                             <SheetClose asChild><Button onClick={() => navigate("/register")} variant="outline" className="text-[10px] font-black uppercase h-11 rounded-xl border-[#FAD0C4] text-[#E75480]">Create Account</Button></SheetClose>
+                          </div>
+                        )}
                     </div>
 
                     <DropdownMenuSeparator className="mx-6 my-2 bg-zinc-100" />
 
-                    {/* CATEGORIES SECTION (Only if Customer) */}
                     {isCustomer && (
                       <div className="py-4">
                         <p className="px-8 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Categories</p>
@@ -244,7 +252,6 @@ export default function Header() {
                     )}
                   </div>
 
-                  {/* Logout Button Fixed at Bottom */}
                   {isAuthenticated && (
                     <div className="p-4 border-t bg-white mt-auto">
                         <button 
@@ -268,7 +275,6 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Search (Only for Customers) */}
             {isCustomer && (
               <div className="hidden lg:flex flex-1 max-w-xl mx-8">
                 <div className="relative w-full group">
@@ -286,14 +292,7 @@ export default function Header() {
               </div>
             )}
 
-            {/* Right Side Icons */}
             <div className="flex items-center gap-1 md:gap-4 ml-auto">
-              {/* {isCustomer && isAuthenticated && (
-                <div className="mr-1">
-                  <NotificationBell userToken={user?.token} />
-                </div>
-              )} */}
-
               <div className="hidden sm:flex items-center gap-1">
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
@@ -303,7 +302,6 @@ export default function Header() {
                     </Button>
                   </DropdownMenuTrigger>
                   
-                  {/* FIXED BACKGROUND: bg-white and z-index to stop transparency */}
                   <DropdownMenuContent align="end" className="w-64 p-2 mt-2 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] bg-white border border-[#FAD0C4]/50 z-[60]">
                     {isAuthenticated ? (
                       <>
@@ -312,6 +310,15 @@ export default function Header() {
                             <p className="text-sm font-bold text-zinc-900 truncate">{user?.email}</p>
                         </div>
                         <DropdownMenuSeparator className="my-2" />
+                        
+                        {isAdmin && (
+                          <div className="space-y-1">
+                            <DropdownMenuItem onClick={() => navigate("/admin/dashboard")} className="rounded-lg py-2.5 cursor-pointer text-white bg-blue-600 hover:bg-blue-700">
+                              <ShieldCheck className="h-4 w-4 mr-3 text-white" /> <span className="font-bold">Admin Dashboard</span>
+                            </DropdownMenuItem>
+                          </div>
+                        )}
+
                         {isCustomer && (
                           <div className="space-y-1">
                             <DropdownMenuItem onClick={() => navigate("/profile")} className="rounded-lg py-2.5 cursor-pointer hover:bg-[#FFF5F7] bg-white">
@@ -319,6 +326,9 @@ export default function Header() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate("/profile/orders")} className="rounded-lg py-2.5 cursor-pointer hover:bg-[#FFF5F7] bg-white">
                               <ShoppingCart className="h-4 w-4 mr-3 text-zinc-400" /> <span className="font-medium">My Orders</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate("/profile/support")} className="rounded-lg py-2.5 cursor-pointer hover:bg-[#FFF9F0] bg-white group">
+                              <LifeBuoy className="h-4 w-4 mr-3 text-[#FFB800]" /> <span className="font-medium text-zinc-800">Help Center</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate("/wishlist")} className="rounded-lg py-2.5 cursor-pointer hover:bg-[#FFF5F7] bg-white">
                               <Heart className="h-4 w-4 mr-3 text-zinc-400" /> <span className="font-medium">Wishlist</span>
@@ -357,7 +367,6 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Cart Drawer (Only Customer) */}
               {isCustomer && (
                 <Button 
                   onClick={() => setIsCartOpen(true)} 
@@ -378,7 +387,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Desktop Mega Menu (Only Customer) */}
         {isCustomer && (
           <div className="hidden lg:block border-t border-[#FAD0C4] bg-white">
             <div className="max-w-[1440px] mx-auto px-8">
@@ -403,7 +411,6 @@ export default function Header() {
               </nav>
             </div>
 
-            {/* Mega Menu Overlay */}
             {activeMegaMenu && megaMenuData[activeMegaMenu] && (
               <div
                 className="absolute top-full left-0 w-full bg-white border-b border-[#FAD0C4] shadow-[0_20px_50px_rgba(231,84,128,0.1)] z-50 animate-in fade-in slide-in-from-top-4 duration-300"

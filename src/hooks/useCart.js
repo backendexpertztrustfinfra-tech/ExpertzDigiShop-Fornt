@@ -1,11 +1,11 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { calculateCartTotal, applyCoupon } from "@/lib/cart"
+import { calculateCartTotal } from "@/lib/cart"
 import { cartAPI } from "@/lib/api"
 
 export const useCart = create()(
   persist(
-    (set, get) => ({
+    (set) => ({
       items: [],
       total: 0,
       subtotal: 0,
@@ -16,19 +16,25 @@ export const useCart = create()(
       appliedCoupon: null,
       isLoading: false,
 
-      getCartKey: (id, size, color) => {
-        return `${id}-${size || "default"}-${color || "default"}`
-      },
-
-      // Sync cart with backend
+      // 🔥 SYNC CART FROM BACKEND (ON REFRESH / LOGIN)
       syncCart: async () => {
         try {
           set({ isLoading: true })
+
           const response = await cartAPI.getCart()
-          if (response.success) {
-            const { items, totalPrice } = response.cart
+
+          if (response?.success && response.cart) {
+            const items = response.cart.items || []
+
             const newState = calculateCartTotal(items, 0)
-            set({ ...newState, isLoading: false })
+
+            set({
+              ...newState,
+              items,
+              isLoading: false,
+            })
+          } else {
+            set({ isLoading: false })
           }
         } catch (error) {
           console.error("Error syncing cart:", error)
@@ -36,136 +42,94 @@ export const useCart = create()(
         }
       },
 
-      addItem: async (newItem) => {
+      // 🟢 ADD ITEM (ONLY BACKEND DRIVEN)
+      addItem: async ({ productId, quantity = 1 }) => {
         try {
           set({ isLoading: true })
-          // Try to add to backend
+
           const response = await cartAPI.addToCart({
-            productId: newItem.id || newItem.productId,
-            quantity: newItem.quantity || 1,
+            productId,
+            quantity,
           })
 
-          if (response.success) {
-            const { items } = response.cart
+          if (response?.success) {
+            const items = response.cart.items || []
             const newState = calculateCartTotal(items, 0)
-            set({ ...newState, isLoading: false })
+
+            set({
+              ...newState,
+              items,
+              isLoading: false,
+            })
           }
         } catch (error) {
           console.error("Error adding to cart:", error)
-          const { items, getCartKey } = get()
-          const cartKey = getCartKey(newItem.id || newItem.productId, newItem.size, newItem.color)
-          const existingItemIndex = items.findIndex(
-            (item) => getCartKey(item.id || item.productId, item.size, item.color) === cartKey,
-          )
-
-          let updatedItems
-          if (existingItemIndex >= 0) {
-            updatedItems = items.map((item, index) =>
-              index === existingItemIndex
-                ? { ...item, quantity: Math.min(item.quantity + (newItem.quantity || 1), item.maxQuantity || 999) }
-                : item,
-            )
-          } else {
-            updatedItems = [...items, { ...newItem, quantity: newItem.quantity || 1 }]
-          }
-
-          const couponDiscount = get().appliedCoupon
-            ? applyCoupon(get().appliedCoupon, calculateCartTotal(updatedItems).subtotal)
-            : 0
-
-          const newState = calculateCartTotal(updatedItems, couponDiscount)
-          set({ ...newState, appliedCoupon: get().appliedCoupon, isLoading: false })
+          set({ isLoading: false })
         }
       },
 
-      addToCart: async (newItem) => {
-        get().addItem(newItem)
+      // alias (safe)
+      addToCart: async (item) => {
+        await useCart.getState().addItem({
+          productId: item.productId || item.id,
+          quantity: item.quantity || 1,
+        })
       },
 
-      removeItem: async (id, size, color) => {
+      // 🟢 REMOVE ITEM
+      removeItem: async (productId) => {
         try {
           set({ isLoading: true })
-          const response = await cartAPI.removeFromCart(id)
 
-          if (response.success) {
-            const { items } = response.cart
+          const response = await cartAPI.removeFromCart(productId)
+
+          if (response?.success) {
+            const items = response.cart.items || []
             const newState = calculateCartTotal(items, 0)
-            set({ ...newState, isLoading: false })
+
+            set({
+              ...newState,
+              items,
+              isLoading: false,
+            })
           }
         } catch (error) {
           console.error("Error removing from cart:", error)
-          // Fallback to local state
-          const { items, getCartKey } = get()
-          const cartKey = getCartKey(id, size, color)
-          const updatedItems = items.filter(
-            (item) => getCartKey(item.id || item.productId, item.size, item.color) !== cartKey,
-          )
-
-          const couponDiscount = get().appliedCoupon
-            ? applyCoupon(get().appliedCoupon, calculateCartTotal(updatedItems).subtotal)
-            : 0
-
-          const newState = calculateCartTotal(updatedItems, couponDiscount)
-          set({ ...newState, appliedCoupon: get().appliedCoupon, isLoading: false })
+          set({ isLoading: false })
         }
       },
 
-      updateQuantity: async (id, quantity, size, color) => {
-        if (quantity <= 0) {
-          get().removeItem(id, size, color)
-          return
-        }
+      // 🟢 UPDATE QUANTITY
+      updateQuantity: async (productId, quantity) => {
+        if (quantity < 1) return
 
         try {
           set({ isLoading: true })
-          const response = await cartAPI.updateCartItem(id, quantity)
 
-          if (response.success) {
-            const { items } = response.cart
+          const response = await cartAPI.updateCartItem(productId, quantity)
+
+          if (response?.success) {
+            const items = response.cart.items || []
             const newState = calculateCartTotal(items, 0)
-            set({ ...newState, isLoading: false })
+
+            set({
+              ...newState,
+              items,
+              isLoading: false,
+            })
           }
         } catch (error) {
           console.error("Error updating cart:", error)
-          // Fallback to local state
-          const { items, getCartKey } = get()
-          const cartKey = getCartKey(id, size, color)
-          const updatedItems = items.map((item) =>
-            getCartKey(item.id || item.productId, item.size, item.color) === cartKey
-              ? { ...item, quantity: Math.min(quantity, item.maxQuantity || 999) }
-              : item,
-          )
-
-          const couponDiscount = get().appliedCoupon
-            ? applyCoupon(get().appliedCoupon, calculateCartTotal(updatedItems).subtotal)
-            : 0
-
-          const newState = calculateCartTotal(updatedItems, couponDiscount)
-          set({ ...newState, appliedCoupon: get().appliedCoupon, isLoading: false })
+          set({ isLoading: false })
         }
       },
 
-      applyCouponCode: (code) => {
-        const { subtotal } = get()
-        const discount = applyCoupon(code, subtotal)
-
-        if (discount > 0) {
-          const newState = calculateCartTotal(get().items, discount)
-          set({ ...newState, appliedCoupon: code })
-          return true
-        }
-        return false
-      },
-
-      removeCoupon: () => {
-        const newState = calculateCartTotal(get().items, 0)
-        set({ ...newState, appliedCoupon: null })
-      },
-
+      // 🟢 CLEAR CART
       clearCart: async () => {
         try {
           set({ isLoading: true })
           await cartAPI.clearCart()
+
           set({
             items: [],
             total: 0,
@@ -195,6 +159,6 @@ export const useCart = create()(
     }),
     {
       name: "cart-storage",
-    },
-  ),
+    }
+  )
 )

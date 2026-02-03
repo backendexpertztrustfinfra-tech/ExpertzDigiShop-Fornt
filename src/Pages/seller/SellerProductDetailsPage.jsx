@@ -11,7 +11,45 @@ import { Separator } from "@/components/ui/separator"
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api"
 
-const UPLOAD_BASE_URL = API_BASE_URL.replace("/api", "")
+const UPLOAD_BASE_URL = "https://expertz-digishop.onrender.com"
+
+const getAllImages = (product) => {
+  if (!product?.images) return []
+  return [
+    product.images.primary,
+    product.images.frontView,
+    product.images.backView,
+    product.images.sideView,
+  ].filter(Boolean)
+}
+
+const getSellingPrice = (product) => {
+  if (product?.variants?.length > 0) {
+    return product.variants[0].sellingPrice || 0
+  }
+  return product?.pricing?.sellingPrice || 0
+}
+
+const getMRP = (product) => {
+  if (product?.variants?.length > 0) {
+    return product.variants[0].mrp || 0
+  }
+  return product?.pricing?.mrp || 0
+}
+
+const getStock = (product) => {
+  if (product?.variants?.length > 0) {
+    return product.variants[0].stock || 0
+  }
+  return product?.inventory?.totalStock || 0
+}
+
+const getSKU = (product) => {
+  if (product?.variants?.length > 0) {
+    return product.variants[0].sku || "N/A"
+  }
+  return product?.compliance?.sku || "N/A"
+}
 
 const DetailItem = ({ label, value, isPrimary = false }) => (
   <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
@@ -42,7 +80,7 @@ export default function SellerProductDetailsPage() {
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/sellers/products/${id}`, {
+        const res = await fetch(`${API_BASE_URL}/products/${id}`, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
@@ -54,8 +92,9 @@ export default function SellerProductDetailsPage() {
         const fetchedProduct = data.product
         setProduct(fetchedProduct)
         
-        if (fetchedProduct.images && fetchedProduct.images.length > 0) {
-          setMainImage(fetchedProduct.images[0])
+        const imgs = getAllImages(fetchedProduct)
+        if (imgs.length > 0) {
+          setMainImage(imgs[0])
         }
       } catch (err) {
         toast.error("Error loading product details. Please try again.")
@@ -71,7 +110,7 @@ export default function SellerProductDetailsPage() {
   const getImageUrl = (img) => {
     if (!img) return "/placeholder.svg"
     
-    let imagePath = img;
+    let imagePath = String(img);
 
     if (imagePath.includes("localhost:5000")) {
       imagePath = imagePath.split("/uploads/")[1];
@@ -145,25 +184,25 @@ export default function SellerProductDetailsPage() {
                 
                 <div className="aspect-square w-full mb-4 overflow-hidden rounded-xl border-4 border-purple-200 shadow-lg group">
                     <img
-                        src={getImageUrl(mainImage || product.images?.[0])}
+                        src={getImageUrl(mainImage)}
                         alt={product.name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+                        onError={(e) => { e.target.src = "/placeholder.svg" }}
                     />
                 </div>
                 
-                {product.images && product.images.length > 0 && (
-                    <div className="flex gap-3 overflow-x-auto pb-2">
-                        {product.images.map((img, i) => (
-                            <img
-                                key={i}
-                                src={getImageUrl(img)}
-                                alt={`thumb-${i}`}
-                                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover cursor-pointer transition-all duration-200 border-2 shadow-sm ${mainImage === img ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300 hover:border-blue-300'}`}
-                                onClick={() => setMainImage(img)}
-                            />
-                        ))}
-                    </div>
-                )}
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                    {getAllImages(product).map((img, i) => (
+                        <img
+                            key={i}
+                            src={getImageUrl(img)}
+                            alt={`thumb-${i}`}
+                            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover cursor-pointer transition-all duration-200 border-2 shadow-sm ${mainImage === img ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-300 hover:border-blue-300'}`}
+                            onClick={() => setMainImage(img)}
+                            onError={(e) => { e.target.src = "/placeholder.svg" }}
+                        />
+                    ))}
+                </div>
             </CardContent>
           </Card>
 
@@ -203,19 +242,19 @@ export default function SellerProductDetailsPage() {
                 <div className="space-y-4">
                     <div className="flex justify-between items-end">
                         <span className="text-xl font-bold text-gray-600">Selling Price:</span>
-                        <span className="text-4xl font-extrabold text-blue-700">{formatPrice(product.price)}</span>
+                        <span className="text-4xl font-extrabold text-blue-700">{formatPrice(getSellingPrice(product))}</span>
                     </div>
-                    {product.originalPrice && product.originalPrice > product.price && (
+                    {getMRP(product) > getSellingPrice(product) && (
                         <div className="flex justify-between text-sm text-gray-500 italic pt-1">
                             <span>M.R.P.:</span>
-                            <span className="line-through text-red-500 font-medium">{formatPrice(product.originalPrice)}</span>
+                            <span className="line-through text-red-500 font-medium">{formatPrice(getMRP(product))}</span>
                         </div>
                     )}
                 </div>
                 
                 <Separator className="my-3" />
 
-                <DetailItem label="Current Stock" value={`${product.stock || 0} units`} isPrimary={true} />
+                <DetailItem label="Current Stock" value={`${getStock(product)} units`} isPrimary={true} />
                 <DetailItem label="Category" value={product.category || "N/A"} />
                 <DetailItem label="Subcategory" value={product.subcategory || "N/A"} />
             </CardContent>
@@ -228,11 +267,11 @@ export default function SellerProductDetailsPage() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 space-y-1">
-              <DetailItem label="SKU" value={product.sku || "N/A"} />
-              <DetailItem label="HSN Code" value={product.hsn || "N/A"} />
-              <DetailItem label="GST Rate" value={`${product.gst || 0}%`} />
-              <DetailItem label="Weight" value={`${product.weight || 0} kg`} />
-              <DetailItem label="Dimensions (L x W x H)" value={`${product.length || 0} x ${product.width || 0} x ${product.height || 0} cm`} />
+              <DetailItem label="SKU" value={getSKU(product)} />
+              <DetailItem label="HSN Code" value={product.compliance?.hsnCode || "N/A"} />
+              <DetailItem label="GST Rate" value={`${product.compliance?.gst || 0}%`} />
+              <DetailItem label="Weight" value={`${product.variants?.[0]?.weight || product.specifications?.weight || 0} kg`} />
+              <DetailItem label="Dimensions (L x W x H)" value={`${product.variants?.[0]?.length || product.specifications?.dimensions?.length || 0} x ${product.variants?.[0]?.width || product.specifications?.dimensions?.width || 0} x ${product.variants?.[0]?.height || product.specifications?.dimensions?.height || 0} cm`} />
               <DetailItem 
                 label="Created" 
                 value={product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'N/A'} 

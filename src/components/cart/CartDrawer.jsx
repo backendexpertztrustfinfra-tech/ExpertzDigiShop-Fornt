@@ -9,17 +9,19 @@ import { applyCoupon } from "@/lib/cart"
 import { formatPrice } from "@/lib/utils"
 import { Link } from "react-router-dom"
 
-const IMAGE_ROOT_URL = "http://localhost:5000"
+const IMAGE_ROOT_URL = import.meta.env.VITE_API_URL 
+  ? import.meta.env.VITE_API_URL.replace("/api", "") 
+  : "http://localhost:5000";
 
 const getFullImageUrl = (imagePath) => {
-  if (imagePath && typeof imagePath === "string") {
-    const cleanedPath = imagePath.replace(/\\/g, "/")
-    const finalPath = cleanedPath.startsWith("uploads/") ? cleanedPath : `uploads/${cleanedPath}`
-    return `${IMAGE_ROOT_URL}/${finalPath.replace(/^\/+/, "")}`
+  if (!imagePath) return "/placeholder.svg";
+  if (imagePath.startsWith("http")) return imagePath;
+  let cleaned = imagePath.replace(/\\/g, "/");
+  if (!cleaned.startsWith("uploads/")) {
+    cleaned = `uploads/${cleaned.replace(/^\/+/, "")}`;
   }
-  return "/placeholder.svg"
-}
-
+  return `${IMAGE_ROOT_URL.replace(/\/+$/, "")}/${cleaned}`;
+};
 const CartDrawer = ({ isOpen, onClose }) => {
   const {
     items,

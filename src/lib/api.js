@@ -1,27 +1,18 @@
-// src/lib/api.js
 import Cookies from "js-cookie"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://expertz-digishop.onrender.com/api"
 
-// Read token from cookies (matches your AuthContext)
 const getToken = () => Cookies.get("userToken")
 
-/**
- * apiRequest
- * - endpoint: string (e.g. "/auth/login")
- * - options: fetch options (method, body, headers, etc.)
- * - overrideToken: optional string token to use instead of cookie token
- *
- * Returns parsed JSON or throws Error on non-OK responses.
- */
 const apiRequest = async (endpoint, options = {}, overrideToken = null) => {
-  // ensure headers object exists
   const headers = {
-    "Content-Type": "application/json",
     ...(options.headers || {}),
   }
 
-  // choose token: overrideToken has priority, otherwise cookie token
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+
   const token = overrideToken || getToken()
   if (token) {
     headers.Authorization = `Bearer ${token}`
@@ -33,7 +24,6 @@ const apiRequest = async (endpoint, options = {}, overrideToken = null) => {
       headers,
     })
 
-    // Attempt to parse JSON safely
     let data = null
     const text = await response.text().catch(() => null)
     if (text) {
@@ -41,20 +31,17 @@ const apiRequest = async (endpoint, options = {}, overrideToken = null) => {
         data = JSON.parse(text)
       } catch (parseErr) {
         console.warn("[apiRequest] Failed to parse JSON response:", parseErr)
-        // keep raw text in data.raw for debugging
         data = { success: false, raw: text }
       }
     }
 
     if (!response.ok) {
-      // if unauthorized -> clear cookies (optional redirect handled by app)
       if (response.status === 401) {
         console.warn("[apiRequest] Unauthorized - clearing auth cookies")
         Cookies.remove("userToken")
         Cookies.remove("userRole")
         Cookies.remove("userData")
         Cookies.remove("sellerVerificationStatus")
-        // optionally you can redirect here: window.location.href = "/login"
       }
       const errorMsg = (data && data.message) || `API Error: ${response.status}`
       console.error("[apiRequest] API Error:", errorMsg)
@@ -69,6 +56,14 @@ const apiRequest = async (endpoint, options = {}, overrideToken = null) => {
     console.error("[apiRequest] Request Failed:", error.message || error)
     throw error
   }
+}
+
+// 🟢 NEW HELPER: For Dashboard Sync (Fixed api.get/api.put issues)
+export const api = {
+  get: (endpoint, options = {}) => apiRequest(endpoint, { method: "GET", ...options }),
+  post: (endpoint, body, options = {}) => apiRequest(endpoint, { method: "POST", body: JSON.stringify(body), ...options }),
+  put: (endpoint, body, options = {}) => apiRequest(endpoint, { method: "PUT", body: JSON.stringify(body), ...options }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { method: "DELETE", ...options }),
 }
 
 /* --- API Groups --- */
@@ -153,16 +148,16 @@ export const productAPI = {
     return apiRequest(`/products/category-home/${category}${queryString ? "?" + queryString : ""}`)
   },
   getCategoriesWithCount: () => apiRequest("/products/categories-count"),
-  createProduct: (productData) =>
-    apiRequest("/products", {
-      method: "POST",
-      body: JSON.stringify(productData),
-    }),
-  updateProduct: (id, productData) =>
-    apiRequest(`/products/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(productData),
-    }),
+  createProduct: (formData) =>
+  apiRequest("/products", {
+    method: "POST",
+    body: formData,
+  }),
+  updateProduct: (id, formData) =>
+  apiRequest(`/products/${id}`, {
+    method: "PUT",
+    body: formData,
+  }),
   deleteProduct: (id) => apiRequest(`/products/${id}`, { method: "DELETE" }),
 }
 
@@ -242,7 +237,8 @@ export const sellerAPI = {
   },
   getOrders: (params = {}) => {
     const queryString = new URLSearchParams(params).toString()
-    return apiRequest(`/sellers/orders${queryString ? "?" + queryString : ""}`)
+    // 🟢 UPDATED: Syncing with Platform logic route
+    return apiRequest(`/orders/seller/orders/dashboard${queryString ? "?" + queryString : ""}`)
   },
   createProduct: (productData) =>
     apiRequest("/sellers/products", {
@@ -263,7 +259,7 @@ export const sellerAPI = {
   exportOrders: (format = "json") => apiRequest(`/sellers/export/orders?format=${format}`),
 }
 
-/* ---------- PAYMENT API (updated to accept optional token override) ---------- */
+/* ---------- PAYMENT API ---------- */
 
 export const paymentAPI = {
   createOrderForPayment: (paymentData, token = null) =>
@@ -275,7 +271,6 @@ export const paymentAPI = {
       },
       token,
     ).then((res) => {
-      // helpful debug: warn if server didn't echo orderData (common source of failures)
       if (res && res.success && !res.orderData) {
         console.warn("[paymentAPI.createOrderForPayment] server did not return orderData. Response:", res)
       }
@@ -338,7 +333,61 @@ export const returnAPI = {
     }),
 }
 
-export default {
+export const adminAPI = {
+  getSellers: (status, params = {}) => {
+    const queryString = new URLSearchParams({ ...params }).toString()
+    if (status === "pending") {
+      return apiRequest(`/admin-seller/pending${queryString ? "?" + queryString : ""}`)
+    }
+    return apiRequest(`/admin-seller/all?status=${status}${queryString ? "&" + queryString : ""}`)
+  },
+
+  getSellerDetails: (kycId) =>
+    apiRequest(`/admin-seller/kyc/${kycId}`),
+
+  approveSeller: (sellerId, notes) =>
+    apiRequest(`/admin-seller/approve/${sellerId}`, {
+      method: "PUT",
+      body: JSON.stringify({ verificationNotes: notes }),
+    }),
+
+  rejectSeller: (sellerId, reason) =>
+    apiRequest(`/admin-seller/reject/${sellerId}`, {
+      method: "PUT",
+      body: JSON.stringify({ rejectionReason: reason }),
+    }),
+
+  getComplaints: (status, params = {}) => {
+    const queryString = new URLSearchParams(params).toString()
+    return apiRequest(`/admin-complaint/complaints?status=${status}${queryString ? "&" + queryString : ""}`)
+  },
+}
+
+
+export const adminProductAPI = {
+  getPendingProducts: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString()
+    return apiRequest(`/admin-product/pending${queryString ? "?" + queryString : ""}`)
+  },
+
+  getAllProducts: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString()
+    return apiRequest(`/admin-product/all${queryString ? "?" + queryString : ""}`)
+  },
+
+  approveProduct: (productId) =>
+    apiRequest(`/admin-product/approve/${productId}`, {
+      method: "PUT",
+    }),
+
+  rejectProduct: (productId, rejectionReason) =>
+    apiRequest(`/admin-product/reject/${productId}`, {
+      method: "PUT",
+      body: JSON.stringify({ rejectionReason }),
+    }),
+}
+
+const defaultExport = {
   authAPI,
   userAPI,
   productAPI,
@@ -350,4 +399,8 @@ export default {
   paymentAPI,
   supportAPI,
   returnAPI,
+  adminAPI,
+  adminProductAPI,
 }
+
+export default api;
