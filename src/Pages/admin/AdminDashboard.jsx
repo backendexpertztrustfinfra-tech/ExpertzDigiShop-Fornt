@@ -226,9 +226,6 @@ const AdminDashboard = () => {
                   bgColor="#8B5CF6"
                 />
               </div>
-
-         
-
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-lg shadow p-6">
